@@ -1,20 +1,44 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/xsd/maven-4.0.0.xsd http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
         <groupId>com.lixiangyu</groupId>
         <artifactId>demo</artifactId>
         <version>0.0.1-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <groupId>com.lixiangyu</groupId>
     <artifactId>test</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
-
+    <packaging>jar</packaging>
     <name>test</name>
-    <description>test</description>
+    <description>测试模块，包含集成测试、单元测试等</description>
 
+    <dependencies>
+        <!-- 测试时可能需要依赖所有模块 -->
+        <dependency>
+            <groupId>com.lixiangyu</groupId>
+            <artifactId>web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.lixiangyu</groupId>
+            <artifactId>service</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.lixiangyu</groupId>
+            <artifactId>dal</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.lixiangyu</groupId>
+            <artifactId>common</artifactId>
+        </dependency>
+        
+        <!-- 测试相关依赖 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+        </dependency>
+    </dependencies>
 
 </project>
