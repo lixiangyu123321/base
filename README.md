@@ -19,11 +19,13 @@ demo/
 
 ## 技术栈
 
-- **Java**: 17
-- **Spring Boot**: 4.0.0
+- **Java**: 8
+- **Spring Boot**: 2.7.18
 - **MyBatis**: 3.5.13
+- **MyBatis Spring Boot Starter**: 2.3.2
 - **TK MyBatis**: 4.2.3
-- **PageHelper**: 1.4.2
+- **PageHelper**: 1.4.7
+- **Spring Cloud**: 2021.0.10
 - **Lombok**: 最新版本
 - **MySQL**: 8.0+
 

@@ -6,11 +6,12 @@ server:
 spring:
   application:
     name: demo
+
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/demo?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
-    username: root
-    password: root
+    url: jdbc:mysql://localhost:3306/test?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: lixiangyu
+    password:
     hikari:
       minimum-idle: 5
       maximum-pool-size: 20
@@ -21,8 +22,8 @@ spring:
 mybatis:
   # 引用 common 模块的全局配置
   config-location: classpath:mybatis/mybatis-config.xml
-  # 扫描 dal 模块的 Mapper XML
-  mapper-locations: classpath:mapper/**/*.xml
+  # 扫描 dal 模块的 Mapper XML（注意：dal 模块的 XML 在 mybatis/mapper 目录下）
+  mapper-locations: classpath:mybatis/mapper/**/*.xml
   # 扫描 dal 模块的实体类
   type-aliases-package: com.lixiangyu.dal.entity
 

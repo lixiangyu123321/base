@@ -112,6 +112,7 @@ Maven 父子模块（Parent-Child Modules）是一种项目组织方式，通过
     <dependency>
         <groupId>org.projectlombok</groupId>
         <artifactId>lombok</artifactId>
+        <version>1.8.3</version>>
         <optional>true</optional>
     </dependency>
 </dependencies>
@@ -127,19 +128,20 @@ Maven 父子模块（Parent-Child Modules）是一种项目组织方式，通过
 ```xml
 <!-- dal 模块 pom.xml -->
 <dependencies>
+<!--   子模块无需引入父模块denpendencies引入的模块，直接继承-->
     <!-- 依赖 common 模块 -->
-    <dependency>
-        <groupId>com.lixiangyu</groupId>
-        <artifactId>common</artifactId>
-        <!-- 不需要写 version，由 dependencyManagement 管理 -->
-    </dependency>
+<!--    <dependency>-->
+<!--        <groupId>com.lixiangyu</groupId>-->
+<!--        <artifactId>common</artifactId>-->
+<!--        &lt;!&ndash; 不需要写 version，由 dependencyManagement 管理 &ndash;&gt;-->
+<!--    </dependency>-->
     
     <!-- MyBatis 依赖 -->
-    <dependency>
-        <groupId>tk.mybatis</groupId>
-        <artifactId>mapper</artifactId>
-        <!-- 不需要写 version，由 dependencyManagement 管理 -->
-    </dependency>
+<!--    <dependency>-->
+<!--        <groupId>tk.mybatis</groupId>-->
+<!--        <artifactId>mapper</artifactId>-->
+<!--        &lt;!&ndash; 不需要写 version，由 dependencyManagement 管理 &ndash;&gt;-->
+<!--    </dependency>-->
 </dependencies>
 ```
 
@@ -398,6 +400,61 @@ Maven 支持两种多模块组织方式：
 
 1. **聚合（Aggregation）**：父模块通过 `<modules>` 声明子模块，用于统一构建
 2. **继承（Inheritance）**：子模块通过 `<parent>` 声明父模块，用于配置继承
+
+**子模块可继承的内容包括：**
+
+1. **坐标信息**
+   - `groupId`：自动继承父模块的 groupId
+   - `version`：自动继承父模块的 version
+   - `artifactId`：必须自己声明（不能继承）
+
+2. **属性（Properties）**
+   - 父模块 `<properties>` 中定义的所有属性
+   - 子模块可以直接使用 `${属性名}` 引用
+
+3. **依赖管理（Dependency Management）**
+   - `<dependencyManagement>` 中定义的依赖版本
+   - 子模块声明依赖时可以省略版本号
+
+4. **直接依赖（Dependencies）**
+   - 父模块 `<dependencies>` 中声明的依赖
+   - 所有子模块自动继承这些依赖
+
+5. **插件管理（Plugin Management）**
+   - `<pluginManagement>` 中定义的插件配置
+   - 子模块使用插件时可以省略版本号
+
+6. **插件配置（Plugins）**
+   - 父模块 `<build><plugins>` 中声明的插件
+   - 子模块自动继承插件配置
+
+7. **构建配置（Build Configuration）**
+   - `<build>` 中的配置（如源码目录、资源目录等）
+   - 子模块可以覆盖父模块的配置
+
+8. **报告配置（Reporting）**
+   - `<reporting>` 中的配置（如测试报告、代码覆盖率等）
+
+9. **仓库配置（Repositories）**
+   - `<repositories>` 和 `<pluginRepositories>` 中定义的仓库
+   - 子模块自动继承仓库配置
+
+10. **分发管理（Distribution Management）**
+    - `<distributionManagement>` 中的配置（如部署仓库地址）
+
+11. **开发者信息（Developers）**
+    - `<developers>` 中定义的开发者信息
+
+12. **许可证信息（Licenses）**
+    - `<licenses>` 中定义的许可证信息
+
+**子模块不能继承的内容：**
+
+- `artifactId`：必须自己声明
+- `packaging`：必须自己声明（通常为 jar）
+- `name`：必须自己声明
+- `description`：必须自己声明
+- `<modules>`：子模块不能再声明子模块（除非是嵌套的多级模块）
 
 **实际项目中，通常同时使用两种方式：**
 

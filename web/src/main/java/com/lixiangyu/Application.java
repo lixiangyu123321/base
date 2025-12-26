@@ -10,7 +10,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * @author lixiangyu
  */
 @SpringBootApplication(scanBasePackages = "com.lixiangyu")
-@MapperScan("com.lixiangyu.dal.entity.mapper")
+@MapperScan("com.lixiangyu.dal.mapper")
 public class Application {
 
     public static void main(String[] args) {

@@ -1,11 +1,26 @@
 package com.lixiangyu.dal.entity;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
-import org.springframework.data.relational.core.mapping.Table;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
+import javax.persistence.Table;
 
+/**
+ * 评测记录实体类
+ *
+ * @author lixiangyu
+ */
 @Data
-@Table("t_aigc_evaluating")
-public class EvaluatingDO extends BaseDO{
+@SuperBuilder
+@NoArgsConstructor
+@AllArgsConstructor
+@EqualsAndHashCode(callSuper = true)
+@Table(name = "t_aigc_evaluating")
+public class EvaluatingDO extends BaseDO {
+
+    private static final long serialVersionUID = 1L;
     private String tag;
     private String type;
     private String imgUrl;

@@ -2,7 +2,7 @@ package com.lixiangyu.service.impl;
 
 import com.lixiangyu.common.exception.BusinessException;
 import com.lixiangyu.dal.entity.UserDO;
-import com.lixiangyu.mapper.UserMapper;
+import com.lixiangyu.dal.mapper.UserMapper;
 import com.lixiangyu.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

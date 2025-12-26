@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.0.0</version>
+        <version>2.7.18</version>
     </parent>
 
     <groupId>com.lixiangyu</groupId>
@@ -30,18 +30,19 @@
 
 
     <properties>
-        <java.version>17</java.version>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
+        <java.version>1.8</java.version>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         
         <!-- 版本管理 -->
-        <spring-cloud.version>2025.1.0</spring-cloud.version>
+        <lombok.version>1.18.30</lombok.version>
+        <spring-cloud.version>2021.0.10</spring-cloud.version>
         <mybatis.version>3.5.13</mybatis.version>
-        <mybatis-spring-boot.version>3.0.3</mybatis-spring-boot.version>
+        <mybatis-spring-boot.version>2.3.2</mybatis-spring-boot.version>
         <tk-mybatis.version>4.2.3</tk-mybatis.version>
-        <pagehelper.version>1.4.2</pagehelper.version>
+        <pagehelper.version>1.4.7</pagehelper.version>
         
         <!-- 项目版本 -->
         <project.version>0.0.1-SNAPSHOT</project.version>
@@ -53,6 +54,7 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
+            <version>${lombok.version}</version>
             <optional>true</optional>
         </dependency>
     </dependencies>
@@ -60,14 +62,16 @@
     <!-- dependencyManagement：依赖版本管控，子工程需按需导入 -->
     <dependencyManagement>
         <dependencies>
-            <!-- Spring Cloud 依赖管理 -->
+            <!-- Spring Cloud 依赖管理（如果不需要可以注释） -->
+            <!--
             <dependency>
                 <groupId>org.springframework.cloud</groupId>
                 <artifactId>spring-cloud-dependencies</artifactId>
-                <version>${spring-cloud.version}</version>
+                <version>2021.0.10</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+            -->
             
             <!-- 项目内部模块依赖版本管理 -->
             <dependency>
@@ -127,6 +131,13 @@
                 <artifactId>pagehelper-spring-boot-starter</artifactId>
                 <version>${pagehelper.version}</version>
             </dependency>
+            
+            <!-- MySQL 驱动版本管理（Spring Boot 2.7.18 默认使用 8.0.33） -->
+            <dependency>
+                <groupId>mysql</groupId>
+                <artifactId>mysql-connector-java</artifactId>
+                <version>8.0.33</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -135,11 +146,19 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.8.1</version>
                 <configuration>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                    <encoding>${project.build.sourceEncoding}</encoding>
+                    <compilerArgs>
+                        <arg>-parameters</arg>
+                    </compilerArgs>
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
                         </path>
                     </annotationProcessorPaths>
                 </configuration>

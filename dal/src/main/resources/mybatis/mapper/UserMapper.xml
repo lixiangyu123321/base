@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.lixiangyu.mapper.UserMapper">
+<mapper namespace="com.lixiangyu.dal.mapper.UserMapper">
 
     <!-- 结果映射 -->
     <resultMap id="BaseResultMap" type="com.lixiangyu.dal.entity.UserDO">
@@ -30,6 +30,23 @@
         WHERE username = #{username}
         AND status = 1
     </select>
+
+    <!-- 批量更新用户（动态SQL） -->
+    <update id="batchUpdateUsers">
+        UPDATE t_user
+        SET
+            status = CASE 
+                WHEN status = 1 THEN 0 
+                ELSE 1 
+            END,
+            modifier = #{modifier},
+            update_time = #{updateTime},
+            remark = CONCAT('批量更新_', UNIX_TIMESTAMP(#{updateTime}))
+        WHERE id IN
+        <foreach collection="idList" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </update>
 
 </mapper>
 

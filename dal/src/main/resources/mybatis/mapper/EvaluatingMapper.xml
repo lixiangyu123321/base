@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lixiangyu.dal.mapper.EvaluatingMapper">
+
+    <!-- 结果映射 -->
+    <resultMap id="BaseResultMap" type="com.lixiangyu.dal.entity.EvaluatingDO">
+        <id column="id" property="id"/>
+        <result column="tag" property="tag"/>
+        <result column="type" property="type"/>
+        <result column="img_url" property="imgUrl"/>
+        <result column="prompt" property="prompt"/>
+        <result column="prompt_mills" property="promptMills"/>
+        <result column="refer_key" property="referKey"/>
+        <result column="model_code" property="modelCode"/>
+        <result column="ret_url" property="retUrl"/>
+        <result column="ellipse_mills" property="ellipseMills"/>
+        <result column="evaluate_result" property="evaluateResult"/>
+        <result column="creator" property="creator"/>
+        <result column="modifier" property="modifier"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="remark" property="remark"/>
+    </resultMap>
+
+    <!-- 基础列 -->
+    <sql id="Base_Column_List">
+        id, tag, type, img_url, prompt, prompt_mills, refer_key, model_code, ret_url, 
+        ellipse_mills, evaluate_result, creator, modifier, create_time, update_time, remark
+    </sql>
+
+    <!-- 批量更新SQL -->
+    <update id="batchUpdate">
+        UPDATE t_aigc_evaluating
+        <trim prefix="SET" suffixOverrides=",">
+            <!-- 批量更新tag字段 -->
+            <trim prefix="tag = CASE" suffix="END,">
+                <foreach collection="dosToUpdate" item="item" index="index">
+                    <if test="item.tag != null">
+                        WHEN id = #{item.id} THEN #{item.tag}
+                    </if>
+                </foreach>
+            </trim>
+
+            <!-- 批量更新type字段 -->
+            <trim prefix="type = CASE" suffix="END,">
+                <foreach collection="dosToUpdate" item="item" index="index">
+                    <if test="item.type != null">
+                        WHEN id = #{item.id} THEN #{item.type}
+                    </if>
+                </foreach>
+            </trim>
+
+            <!-- 批量更新img_url字段 -->
+            <trim prefix="img_url = CASE" suffix="END,">
+                <foreach collection="dosToUpdate" item="item" index="index">
+                    <if test="item.imgUrl != null">
+                        WHEN id = #{item.id} THEN #{item.imgUrl}
+                    </if>
+                </foreach>
+            </trim>
+
+            <!-- 批量更新prompt字段 -->
+            <trim prefix="prompt = CASE" suffix="END,">
+                <foreach collection="dosToUpdate" item="item" index="index">
+                    <if test="item.prompt != null">
+                        WHEN id = #{item.id} THEN #{item.prompt}
+                    </if>
+                </foreach>
+            </trim>
+
+            <!-- 批量更新prompt_mills字段 -->
+            <trim prefix="prompt_mills = CASE" suffix="END,">
+                <foreach collection="dosToUpdate" item="item" index="index">
+                    <if test="item.promptMills != null">
+                        WHEN id = #{item.id} THEN #{item.promptMills}
+                    </if>
+                </foreach>
+            </trim>
+
+            <!-- 批量更新refer_key字段 -->
+            <trim prefix="refer_key = CASE" suffix="END,">
+                <foreach collection="dosToUpdate" item="item" index="index">
+                    <if test="item.referKey != null">
+                        WHEN id = #{item.id} THEN #{item.referKey}
+                    </if>
+                </foreach>
+            </trim>
+
+            <!-- 批量更新model_code字段 -->
+            <trim prefix="model_code = CASE" suffix="END,">
+                <foreach collection="dosToUpdate" item="item" index="index">
+                    <if test="item.modelCode != null">
+                        WHEN id = #{item.id} THEN #{item.modelCode}
+                    </if>
+                </foreach>
+            </trim>
+
+            <!-- 批量更新ret_url字段 -->
+            <trim prefix="ret_url = CASE" suffix="END,">
+                <foreach collection="dosToUpdate" item="item" index="index">
+                    <if test="item.retUrl != null">
+                        WHEN id = #{item.id} THEN #{item.retUrl}
+                    </if>
+                </foreach>
+            </trim>
+
+            <!-- 批量更新ellipse_mills字段 -->
+            <trim prefix="ellipse_mills = CASE" suffix="END,">
+                <foreach collection="dosToUpdate" item="item" index="index">
+                    <if test="item.ellipseMills != null">
+                        WHEN id = #{item.id} THEN #{item.ellipseMills}
+                    </if>
+                </foreach>
+            </trim>
+
+            <!-- 批量更新evaluate_result字段 -->
+            <trim prefix="evaluate_result = CASE" suffix="END,">
+                <foreach collection="dosToUpdate" item="item" index="index">
+                    <if test="item.evaluateResult != null">
+                        WHEN id = #{item.id} THEN #{item.evaluateResult}
+                    </if>
+                </foreach>
+            </trim>
+
+            <!-- 批量更新modifier字段（更新人） -->
+            <trim prefix="modifier = CASE" suffix="END,">
+                <foreach collection="dosToUpdate" item="item" index="index">
+                    <if test="item.modifier != null">
+                        WHEN id = #{item.id} THEN #{item.modifier}
+                    </if>
+                </foreach>
+            </trim>
+
+            <!-- 批量更新update_time字段（更新时间） -->
+            <trim prefix="update_time = CASE" suffix="END,">
+                <foreach collection="dosToUpdate" item="item" index="index">
+                    <if test="item.updateTime != null">
+                        WHEN id = #{item.id} THEN #{item.updateTime}
+                    </if>
+                </foreach>
+            </trim>
+
+            <!-- 批量更新remark字段 -->
+            <trim prefix="remark = CASE" suffix="END,">
+                <foreach collection="dosToUpdate" item="item" index="index">
+                    <if test="item.remark != null">
+                        WHEN id = #{item.id} THEN #{item.remark}
+                    </if>
+                </foreach>
+            </trim>
+        </trim>
+        WHERE id IN
+        <foreach collection="dosToUpdate" item="item" index="index" open="(" close=")" separator=",">
+            #{item.id}
+        </foreach>
+    </update>
+
+    <!-- 批量插入SQL（避免使用 TK MyBatis 的 insertList 方法） -->
+    <insert id="batchInsert">
+        INSERT INTO t_aigc_evaluating (
+            tag, type, img_url, prompt, prompt_mills, refer_key, model_code, 
+            ret_url, ellipse_mills, evaluate_result, creator, modifier, 
+            create_time, update_time, remark
+        ) VALUES
+        <foreach collection="evaluatingList" item="item" index="index" separator=",">
+            (
+                #{item.tag}, #{item.type}, #{item.imgUrl}, #{item.prompt}, #{item.promptMills}, 
+                #{item.referKey}, #{item.modelCode}, #{item.retUrl}, #{item.ellipseMills}, 
+                #{item.evaluateResult}, #{item.creator}, #{item.modifier}, 
+                #{item.createTime}, #{item.updateTime}, #{item.remark}
+            )
+        </foreach>
+    </insert>
+
+</mapper>

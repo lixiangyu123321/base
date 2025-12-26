@@ -19,3 +19,7 @@ CREATE TABLE `t_aigc_evaluating` (
                                      `status` int(10) DEFAULT '0' COMMENT '状态',
                                      PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=345 DEFAULT CHARSET=utf8 COMMENT='视频评测记录'
+
+
+alter table t_aigc_evaluating
+    add remark text default NULL null comment '注释';
