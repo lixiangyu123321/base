@@ -16,4 +16,32 @@
     <name>common</name>
     <description>公共基础模块，包含通用工具类、常量、配置等</description>
 
+    <dependencies>
+        <!-- Spring Context（包含 @Component、@Autowired 等注解） -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+        </dependency>
+        
+        <!-- Spring Cloud Context（用于 EnvironmentChangeEvent） -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-context</artifactId>
+        </dependency>
+        
+        <!-- SLF4J API（用于日志） -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+        
+        <!-- JSR-250 注解支持（@PostConstruct、@PreDestroy 等）
+             注意：JDK 8 自带 javax.annotation，但为了兼容性和 IDE 支持，显式添加依赖 -->
+        <dependency>
+            <groupId>javax.annotation</groupId>
+            <artifactId>javax.annotation-api</artifactId>
+            <version>1.3.2</version>
+        </dependency>
+    </dependencies>
+
 </project>
