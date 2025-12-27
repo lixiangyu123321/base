@@ -22,20 +22,41 @@ public class UpdataController {
     private UpdateService updateService;
 
 
+    /**
+     * 数据量在2000以上更有优势
+     * @param jsonObject
+     * @return
+     */
     @RequestMapping("cycle")
-    public void cycle(){
+    public UpdateResult cycle(@RequestBody JSONObject jsonObject){
+        int count = jsonObject.getAsNumber("count").intValue();
+        return updateService.cycle(count);
     }
 
 
     @RequestMapping("batchUpdata")
-    public void batchUpdate(){
-
+    public UpdateResult batchUpdate(@RequestBody JSONObject jsonObject){
+        int count = jsonObject.getAsNumber("count").intValue();
+        return updateService.batchUpdate(count);
     }
 
     @RequestMapping("/insert")
     public UpdateResult insert(@RequestBody JSONObject jsonObject){
         int count = jsonObject.getAsNumber("count").intValue();
-        log.info("count:"+count);
         return updateService.insert(count);
+    }
+
+    @RequestMapping("/cycleWithThreadPool")
+    public UpdateResult cycleWithThreadPool(@RequestBody JSONObject jsonObject){
+        int count = jsonObject.getAsNumber("count").intValue();
+        int batchSize = jsonObject.getAsNumber("batchSize").intValue();
+        return updateService.cycleWithThreadPool(count, batchSize);
+    }
+
+    @RequestMapping("/batchUpdateWithThreadPool")
+    public UpdateResult batchUpdateWithThreadPool(@RequestBody JSONObject jsonObject){
+        int count = jsonObject.getAsNumber("count").intValue();
+        int batchSize = jsonObject.getAsNumber("batchSize").intValue();
+        return updateService.batchUpdateWithThreadPool(count, batchSize);
     }
 }

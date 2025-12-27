@@ -438,16 +438,127 @@ java: 找不到符号
 
 ---
 
+## 问题三：TK MyBatis 无法获取实体类对应的表名
+
+### 错误信息
+
+```
+tk.mybatis.mapper.MapperException: 无法获取实体类com.lixiangyu.dal.entity.EvaluatingDO对应的表名!
+	at tk.mybatis.mapper.mapperhelper.EntityHelper.getEntityTable(EntityHelper.java:69)
+	at tk.mybatis.mapper.entity.Example.<init>(Example.java:103)
+```
+
+### 问题分析
+
+#### 3.1 根本原因
+
+TK MyBatis 无法识别实体类的表名，导致在使用 `Example` 类时无法获取表名。
+
+#### 3.2 具体原因分析
+
+**原因 1：使用了错误的 @MapperScan 注解**
+
+- **问题描述**：使用了 `org.mybatis.spring.annotation.MapperScan` 而不是 `tk.mybatis.spring.annotation.MapperScan`
+- **影响**：TK MyBatis 的 MapperHelper 无法正确初始化，导致无法识别实体类的 `@Table` 注解
+- **错误表现**：调用 `new Example(EvaluatingDO.class)` 时抛出 `MapperException`
+
+**原因 2：实体类使用了正确的注解但配置不正确**
+
+- **问题描述**：实体类使用了 `javax.persistence.Table` 注解（这是正确的，TK MyBatis 4.x 支持 JPA 注解）
+- **实际情况**：但需要确保使用 TK MyBatis 的 `@MapperScan` 注解才能正确识别
+
+### 解决方案
+
+#### 解决方案 1：使用 TK MyBatis 的 @MapperScan 注解
+
+**修改 Application 类**：
+
+**修改前**：
+```java
+import org.mybatis.spring.annotation.MapperScan;
+
+@SpringBootApplication(scanBasePackages = "com.lixiangyu")
+@MapperScan("com.lixiangyu.dal.mapper")
+public class Application {
+    // ...
+}
+```
+
+**修改后**：
+```java
+import tk.mybatis.spring.annotation.MapperScan;
+
+@SpringBootApplication(scanBasePackages = "com.lixiangyu")
+@MapperScan(basePackages = "com.lixiangyu.dal.mapper", markerInterface = tk.mybatis.mapper.common.Mapper.class)
+public class Application {
+    // ...
+}
+```
+
+**关键点**：
+1. 使用 `tk.mybatis.spring.annotation.MapperScan` 而不是 `org.mybatis.spring.annotation.MapperScan`
+2. 指定 `markerInterface = tk.mybatis.mapper.common.Mapper.class` 确保 TK MyBatis 正确初始化
+
+#### 解决方案 2：确保实体类使用正确的注解
+
+**实体类配置**：
+
+```java
+import javax.persistence.Table;
+
+@Data
+@SuperBuilder
+@NoArgsConstructor
+@AllArgsConstructor
+@EqualsAndHashCode(callSuper = true)
+@Table(name = "t_aigc_evaluating")  // 使用 JPA 的 @Table 注解
+public class EvaluatingDO extends BaseDO {
+    // ...
+}
+```
+
+**注意**：
+- TK MyBatis 4.x 版本支持使用 `javax.persistence.Table` 注解
+- 不需要使用 `tk.mybatis.mapper.annotation.Table`（该注解在 4.2.3 版本中可能不存在）
+
+### 原理说明
+
+#### TK MyBatis 的 MapperHelper 初始化流程
+
+1. **MapperScan 扫描**：使用 `tk.mybatis.spring.annotation.MapperScan` 时，TK MyBatis 会初始化 `MapperHelper`
+2. **实体类扫描**：`MapperHelper` 会扫描指定包路径下的实体类，识别 `@Table` 注解
+3. **表名缓存**：将实体类和表名的映射关系缓存到 `EntityHelper` 中
+4. **Example 使用**：当使用 `new Example(EntityClass.class)` 时，从缓存中获取表名
+
+#### 为什么使用错误的 @MapperScan 会导致问题？
+
+- `org.mybatis.spring.annotation.MapperScan` 是 MyBatis 原生的注解，只负责扫描 Mapper 接口
+- `tk.mybatis.spring.annotation.MapperScan` 是 TK MyBatis 的注解，除了扫描 Mapper 接口，还会初始化 `MapperHelper` 来识别实体类
+- 如果使用错误的注解，`MapperHelper` 不会被初始化，导致无法识别实体类的表名
+
+### 验证方法
+
+修复后，以下代码应该可以正常工作：
+
+```java
+Example example = new Example(EvaluatingDO.class);
+example.setOrderByClause("id ASC");
+List<EvaluatingDO> list = evaluatingMapper.selectByExample(example);
+```
+
+---
+
 ## 更新记录
 
 | 日期 | 版本 | 更新内容 | 作者 |
 |------|------|---------|------|
 | 2025-12-26 | 1.0 | 初始版本，记录 MyBatis 启动异常和 Lombok 编译问题 | lixiangyu |
 | 2025-12-26 | 1.1 | 添加核心问题：web 模块缺少 mybatis-spring-boot-starter 依赖，详细说明 Spring Boot 自动配置原理和依赖传递的区别 | lixiangyu |
+| 2025-12-26 | 1.2 | 添加 TK MyBatis 无法获取实体类表名的问题分析和解决方案 | lixiangyu |
 
 ---
 
-**文档版本**: 1.1  
+**文档版本**: 1.2  
 **最后更新**: 2025-12-26  
 **适用项目**: com.lixiangyu.demo
 

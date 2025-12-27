@@ -1,8 +1,8 @@
 package com.lixiangyu;
 
-import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import tk.mybatis.spring.annotation.MapperScan;
 
 /**
  * 应用启动类
@@ -10,7 +10,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * @author lixiangyu
  */
 @SpringBootApplication(scanBasePackages = "com.lixiangyu")
-@MapperScan("com.lixiangyu.dal.mapper")
+@MapperScan(basePackages = "com.lixiangyu.dal.mapper", markerInterface = tk.mybatis.mapper.common.Mapper.class)
 public class Application {
 
     public static void main(String[] args) {

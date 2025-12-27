@@ -4,8 +4,8 @@ import com.lixiangyu.common.util.UpdateResult;
 import com.lixiangyu.dal.entity.EvaluatingDO;
 import com.lixiangyu.dal.mapper.EvaluatingMapper;
 import com.lixiangyu.service.UpdateService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tk.mybatis.mapper.entity.Example;
@@ -13,6 +13,9 @@ import tk.mybatis.mapper.entity.Example;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
@@ -22,10 +25,16 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class UpdateServiceImpl implements UpdateService {
 
     private final EvaluatingMapper evaluatingMapper;
+    private final Executor batchUpdateExecutor;
+    
+    public UpdateServiceImpl(EvaluatingMapper evaluatingMapper, 
+                             @Qualifier("batchUpdateExecutor") Executor batchUpdateExecutor) {
+        this.evaluatingMapper = evaluatingMapper;
+        this.batchUpdateExecutor = batchUpdateExecutor;
+    }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -91,7 +100,6 @@ public class UpdateServiceImpl implements UpdateService {
         // 查询需要更新的数据（取前count条）
         Example example = new Example(EvaluatingDO.class);
         example.setOrderByClause("id ASC");
-        example.selectProperties("id", "ellipseMills", "evaluateResult");
         List<EvaluatingDO> evaluatingList = evaluatingMapper.selectByExample(example);
         
         // 限制更新数量
@@ -135,7 +143,6 @@ public class UpdateServiceImpl implements UpdateService {
         // 查询需要更新的数据（取前count条）
         Example example = new Example(EvaluatingDO.class);
         example.setOrderByClause("id ASC");
-        example.selectProperties("id");
         List<EvaluatingDO> evaluatingList = evaluatingMapper.selectByExample(example);
         
         // 限制更新数量
@@ -164,5 +171,165 @@ public class UpdateServiceImpl implements UpdateService {
         log.info("批量更新{}条数据，实际更新{}条，耗时：{}ms", count, actualUpdated, executionTime);
         
         return new UpdateResult(actualUpdated, executionTime, executionTime / 1000.0, "批量更新");
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public UpdateResult cycleWithThreadPool(Integer count, Integer batchSize) {
+        if (count == null || count <= 0) {
+            count = 100;
+        }
+        
+        long startTime = System.currentTimeMillis();
+        
+        // 查询需要更新的数据（取前count条）
+        Example example = new Example(EvaluatingDO.class);
+        example.setOrderByClause("id ASC");
+        List<EvaluatingDO> evaluatingList = evaluatingMapper.selectByExample(example);
+        
+        // 限制更新数量
+        int updateCount = Math.min(count, evaluatingList.size());
+        
+        if (updateCount == 0) {
+            return new UpdateResult(0, 0L, 0.0, "线程池循环更新");
+        }
+        
+        // 每批处理的数据量
+        int batchCount = (updateCount + batchSize - 1) / batchSize;
+        
+        // 使用 CountDownLatch 等待所有任务完成
+        CountDownLatch latch = new CountDownLatch(batchCount);
+        AtomicInteger actualUpdated = new AtomicInteger(0);
+        AtomicInteger errorCount = new AtomicInteger(0);
+        
+        // 分批提交任务到线程池
+        for (int batch = 0; batch < batchCount; batch++) {
+            final int batchIndex = batch;
+            final int start = batch * batchSize;
+            final int end = Math.min((batch + 1) * batchSize, updateCount);
+            
+            batchUpdateExecutor.execute(() -> {
+                try {
+                    int batchUpdated = 0;
+                    // 在当前批次内循环更新
+                    for (int i = start; i < end; i++) {
+                        EvaluatingDO evaluating = evaluatingList.get(i);
+                        // 更新字段
+                        evaluating.setEllipseMills(evaluating.getEllipseMills() == null ? 100L : evaluating.getEllipseMills() + 100);
+                        evaluating.setEvaluateResult("线程池循环更新_" + System.currentTimeMillis() + "_" + Thread.currentThread().getName());
+                        evaluating.setUpdateTime(new Date());
+                        evaluating.setModifier("cycle_thread_pool_update");
+                        evaluating.setRemark("线程池循环更新_" + System.currentTimeMillis());
+                        
+                        // 使用通用Mapper的updateByPrimaryKeySelective方法
+                        int result = evaluatingMapper.updateByPrimaryKeySelective(evaluating);
+                        if (result > 0) {
+                            batchUpdated++;
+                        }
+                    }
+                    actualUpdated.addAndGet(batchUpdated);
+                    //log.debug("线程池批次{}完成，更新{}条数据", batchIndex + 1, batchUpdated);
+                } catch (Exception e) {
+                    errorCount.incrementAndGet();
+                    //log.error("线程池批次{}更新失败", batchIndex + 1, e);
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+        
+        // 等待所有任务完成
+        try {
+            latch.await();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            //log.error("等待线程池任务完成时被中断", e);
+        }
+        
+        long endTime = System.currentTimeMillis();
+        long executionTime = endTime - startTime;
+        
+        //log.info("线程池循环更新{}条数据，实际更新{}条，失败{}条，耗时：{}ms",
+        //        count, actualUpdated.get(), errorCount.get(), executionTime);
+        
+        return new UpdateResult(actualUpdated.get(), executionTime, executionTime / 1000.0, "线程池循环更新");
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public UpdateResult batchUpdateWithThreadPool(Integer count, Integer batchSize) {
+        if (count == null || count <= 0) {
+            count = 100;
+        }
+        
+        long startTime = System.currentTimeMillis();
+        
+        // 查询需要更新的数据（取前count条）
+        Example example = new Example(EvaluatingDO.class);
+        example.setOrderByClause("id ASC");
+        List<EvaluatingDO> evaluatingList = evaluatingMapper.selectByExample(example);
+        
+        // 限制更新数量
+        int updateCount = Math.min(count, evaluatingList.size());
+        
+        if (updateCount == 0) {
+            return new UpdateResult(0, 0L, 0.0, "线程池批量更新");
+        }
+        
+        // 每批处理的数据量
+        int batchCount = (updateCount + batchSize - 1) / batchSize;
+        
+        // 使用 CountDownLatch 等待所有任务完成
+        CountDownLatch latch = new CountDownLatch(batchCount);
+        AtomicInteger actualUpdated = new AtomicInteger(0);
+        AtomicInteger errorCount = new AtomicInteger(0);
+        
+        // 分批提交任务到线程池
+        for (int batch = 0; batch < batchCount; batch++) {
+            final int batchIndex = batch;
+            final int start = batch * batchSize;
+            final int end = Math.min((batch + 1) * batchSize, updateCount);
+            
+            batchUpdateExecutor.execute(() -> {
+                try {
+                    // 获取当前批次的数据
+                    List<EvaluatingDO> batchList = new ArrayList<>();
+                    for (int i = start; i < end; i++) {
+                        EvaluatingDO evaluating = evaluatingList.get(i);
+                        // 设置更新字段
+                        evaluating.setUpdateTime(new Date());
+                        evaluating.setModifier("batch_thread_pool_update");
+                        evaluating.setRemark("线程池批量更新_" + System.currentTimeMillis() + "_" + Thread.currentThread().getName());
+                        batchList.add(evaluating);
+                    }
+                    
+                    // 使用动态SQL批量更新
+                    int batchUpdated = evaluatingMapper.batchUpdate(batchList);
+                    actualUpdated.addAndGet(batchUpdated);
+//                    log.debug("线程池批次{}完成，批量更新{}条数据", batchIndex + 1, batchUpdated);
+                } catch (Exception e) {
+                    errorCount.incrementAndGet();
+//                    log.error("线程池批次{}批量更新失败", batchIndex + 1, e);
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+        
+        // 等待所有任务完成
+        try {
+            latch.await();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+//            log.error("等待线程池任务完成时被中断", e);
+        }
+        
+        long endTime = System.currentTimeMillis();
+        long executionTime = endTime - startTime;
+        
+//        log.info("线程池批量更新{}条数据，实际更新{}条，失败{}条，耗时：{}ms",
+//                count, actualUpdated.get(), errorCount.get(), executionTime);
+        
+        return new UpdateResult(actualUpdated.get(), executionTime, executionTime / 1000.0, "线程池批量更新");
     }
 }

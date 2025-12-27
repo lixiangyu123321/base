@@ -30,7 +30,7 @@
 
     <!-- 批量更新SQL -->
     <update id="batchUpdate">
-        UPDATE t_aigc_evaluating
+        UPDATE `t_aigc_evaluating`
         <trim prefix="SET" suffixOverrides=",">
             <!-- 批量更新tag字段 -->
             <trim prefix="tag = CASE" suffix="END,">
@@ -157,7 +157,7 @@
 
     <!-- 批量插入SQL（避免使用 TK MyBatis 的 insertList 方法） -->
     <insert id="batchInsert">
-        INSERT INTO t_aigc_evaluating (
+        INSERT INTO `t_aigc_evaluating` (
             tag, type, img_url, prompt, prompt_mills, refer_key, model_code, 
             ret_url, ellipse_mills, evaluate_result, creator, modifier, 
             create_time, update_time, remark

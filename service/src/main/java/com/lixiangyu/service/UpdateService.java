@@ -14,4 +14,20 @@ public interface UpdateService {
 
     UpdateResult insert(Integer count);
 
+    /**
+     * 通过线程池分批次在循环内更新
+     *
+     * @param count 更新数量
+     * @return 更新结果
+     */
+    UpdateResult cycleWithThreadPool(Integer count, Integer batchSize);
+
+    /**
+     * 通过线程池批量更新
+     *
+     * @param count 更新数量
+     * @return 更新结果
+     */
+    UpdateResult batchUpdateWithThreadPool(Integer count, Integer batchSize);
+
 }
