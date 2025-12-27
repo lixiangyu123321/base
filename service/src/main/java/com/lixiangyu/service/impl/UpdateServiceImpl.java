@@ -332,4 +332,266 @@ public class UpdateServiceImpl implements UpdateService {
         
         return new UpdateResult(actualUpdated.get(), executionTime, executionTime / 1000.0, "线程池批量更新");
     }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public UpdateResult batchUpdateByCursorId(Integer batchSize, Integer maxCount) {
+        if (batchSize == null || batchSize <= 0) {
+            batchSize = 1000; // 默认批次大小
+        }
+        
+        long startTime = System.currentTimeMillis();
+        int totalUpdated = 0;
+        Long lastId = 0L; // 游标起始位置
+        
+        // 循环查询和更新，直到没有更多数据
+        while (true) {
+            // 1. 基于游标查询一批数据
+            List<EvaluatingDO> batchList = evaluatingMapper.selectByCursorId(lastId, batchSize);
+            
+            if (batchList == null || batchList.isEmpty()) {
+                // 没有更多数据，退出循环
+                break;
+            }
+            
+            // 2. 检查是否超过最大更新数量
+            if (maxCount != null && totalUpdated >= maxCount) {
+                break;
+            }
+            
+            // 3. 计算本次实际更新的数量
+            int currentBatchSize = batchList.size();
+            if (maxCount != null && totalUpdated + currentBatchSize > maxCount) {
+                // 如果加上这批会超过限制，只取部分数据
+                int remaining = maxCount - totalUpdated;
+                batchList = batchList.subList(0, remaining);
+                currentBatchSize = remaining;
+            }
+            
+            // 4. 准备更新数据
+            Date updateTime = new Date();
+            for (EvaluatingDO evaluating : batchList) {
+                evaluating.setUpdateTime(updateTime);
+                evaluating.setModifier("cursor_id_update");
+                evaluating.setRemark("游标ID更新_" + System.currentTimeMillis());
+            }
+            
+            // 5. 批量更新当前批次
+            int updated = evaluatingMapper.batchUpdate(batchList);
+            totalUpdated += updated;
+            
+            // 6. 更新游标位置（使用当前批次的最后一个ID）
+            lastId = batchList.get(batchList.size() - 1).getId();
+            
+            log.debug("游标ID更新：已处理{}条，当前批次{}条，最后ID：{}", totalUpdated, updated, lastId);
+            
+            // 7. 如果查询到的数据少于批次大小，说明已经是最后一批
+            if (currentBatchSize < batchSize) {
+                break;
+            }
+            
+            // 8. 检查是否达到最大更新数量
+            if (maxCount != null && totalUpdated >= maxCount) {
+                break;
+            }
+        }
+        
+        long endTime = System.currentTimeMillis();
+        long executionTime = endTime - startTime;
+        
+        log.info("基于游标ID批量更新完成，共更新{}条数据，耗时：{}ms", totalUpdated, executionTime);
+        
+        return new UpdateResult(totalUpdated, executionTime, executionTime / 1000.0, "游标ID批量更新");
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public UpdateResult batchUpdateByCursorTime(Integer batchSize, Integer maxCount) {
+        if (batchSize == null || batchSize <= 0) {
+            batchSize = 1000; // 默认批次大小
+        }
+        
+        long startTime = System.currentTimeMillis();
+        int totalUpdated = 0;
+        Date lastTime = null; // 游标起始时间
+        
+        // 循环查询和更新，直到没有更多数据
+        while (true) {
+            // 1. 基于游标查询一批数据
+            List<EvaluatingDO> batchList = evaluatingMapper.selectByCursorTime(lastTime, batchSize);
+            
+            if (batchList == null || batchList.isEmpty()) {
+                // 没有更多数据，退出循环
+                break;
+            }
+            
+            // 2. 检查是否超过最大更新数量
+            if (maxCount != null && totalUpdated >= maxCount) {
+                break;
+            }
+            
+            // 3. 计算本次实际更新的数量
+            int currentBatchSize = batchList.size();
+            if (maxCount != null && totalUpdated + currentBatchSize > maxCount) {
+                // 如果加上这批会超过限制，只取部分数据
+                int remaining = maxCount - totalUpdated;
+                batchList = batchList.subList(0, remaining);
+                currentBatchSize = remaining;
+            }
+            
+            // 4. 准备更新数据
+            Date updateTime = new Date();
+            for (EvaluatingDO evaluating : batchList) {
+                evaluating.setUpdateTime(updateTime);
+                evaluating.setModifier("cursor_time_update");
+                evaluating.setRemark("游标时间更新_" + System.currentTimeMillis());
+            }
+            
+            // 5. 批量更新当前批次
+            int updated = evaluatingMapper.batchUpdate(batchList);
+            totalUpdated += updated;
+            
+            // 6. 更新游标位置（使用当前批次的最后一个时间）
+            EvaluatingDO lastRecord = batchList.get(batchList.size() - 1);
+            lastTime = lastRecord.getCreateTime();
+            
+            log.debug("游标时间更新：已处理{}条，当前批次{}条，最后时间：{}", totalUpdated, updated, lastTime);
+            
+            // 7. 如果查询到的数据少于批次大小，说明已经是最后一批
+            if (currentBatchSize < batchSize) {
+                break;
+            }
+            
+            // 8. 检查是否达到最大更新数量
+            if (maxCount != null && totalUpdated >= maxCount) {
+                break;
+            }
+        }
+        
+        long endTime = System.currentTimeMillis();
+        long executionTime = endTime - startTime;
+        
+        log.info("基于游标时间批量更新完成，共更新{}条数据，耗时：{}ms", totalUpdated, executionTime);
+        
+        return new UpdateResult(totalUpdated, executionTime, executionTime / 1000.0, "游标时间批量更新");
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public UpdateResult batchUpdateByCursorIdWithThreadPool(Integer batchSize, Integer threadBatchSize, Integer maxCount) {
+        if (batchSize == null || batchSize <= 0) {
+            batchSize = 5000; // 游标查询批次大小
+        }
+        if (threadBatchSize == null || threadBatchSize <= 0) {
+            threadBatchSize = 1000; // 线程池任务批次大小
+        }
+        
+        long startTime = System.currentTimeMillis();
+        AtomicInteger totalUpdated = new AtomicInteger(0);
+        Long lastId = 0L; // 游标起始位置
+        
+        // 循环查询，每次查询一批数据，然后提交到线程池处理
+        while (true) {
+            // 1. 基于游标查询一批数据
+            List<EvaluatingDO> cursorBatch = evaluatingMapper.selectByCursorId(lastId, batchSize);
+            
+            if (cursorBatch == null || cursorBatch.isEmpty()) {
+                // 没有更多数据，退出循环
+                break;
+            }
+            
+            // 2. 检查是否超过最大更新数量
+            if (maxCount != null && totalUpdated.get() >= maxCount) {
+                break;
+            }
+            
+            // 3. 将游标批次分成多个线程池任务批次
+            int cursorBatchSize = cursorBatch.size();
+            int threadBatchCount = (cursorBatchSize + threadBatchSize - 1) / threadBatchSize;
+            
+            // 使用 CountDownLatch 等待所有任务完成
+            CountDownLatch latch = new CountDownLatch(threadBatchCount);
+            AtomicInteger batchUpdated = new AtomicInteger(0);
+            AtomicInteger errorCount = new AtomicInteger(0);
+            
+            // 4. 提交任务到线程池
+            for (int i = 0; i < threadBatchCount; i++) {
+                final int batchIndex = i;
+                final int start = i * threadBatchSize;
+                final int end = Math.min((i + 1) * threadBatchSize, cursorBatchSize);
+                
+                // 检查是否超过最大更新数量
+                if (maxCount != null && totalUpdated.get() >= maxCount) {
+                    latch.countDown();
+                    continue;
+                }
+                
+                batchUpdateExecutor.execute(() -> {
+                    try {
+                        // 获取当前任务批次的数据
+                        List<EvaluatingDO> threadBatch = new ArrayList<>();
+                        for (int j = start; j < end; j++) {
+                            EvaluatingDO evaluating = cursorBatch.get(j);
+                            
+                            // 检查是否超过最大更新数量
+                            if (maxCount != null && totalUpdated.get() + batchUpdated.get() >= maxCount) {
+                                break;
+                            }
+                            
+                            // 设置更新字段
+                            evaluating.setUpdateTime(new Date());
+                            evaluating.setModifier("cursor_thread_pool_update");
+                            evaluating.setRemark("游标线程池更新_" + System.currentTimeMillis() + "_" + Thread.currentThread().getName());
+                            threadBatch.add(evaluating);
+                        }
+                        
+                        if (!threadBatch.isEmpty()) {
+                            // 使用动态SQL批量更新
+                            int updated = evaluatingMapper.batchUpdate(threadBatch);
+                            batchUpdated.addAndGet(updated);
+                        }
+                    } catch (Exception e) {
+                        errorCount.incrementAndGet();
+                        log.error("游标线程池批次{}更新失败", batchIndex + 1, e);
+                    } finally {
+                        latch.countDown();
+                    }
+                });
+            }
+            
+            // 5. 等待当前游标批次的所有任务完成
+            try {
+                latch.await();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.error("等待线程池任务完成时被中断", e);
+                break;
+            }
+            
+            // 6. 更新总计数
+            totalUpdated.addAndGet(batchUpdated.get());
+            
+            // 7. 更新游标位置
+            lastId = cursorBatch.get(cursorBatch.size() - 1).getId();
+            
+            log.debug("游标线程池更新：已处理{}条，当前游标批次{}条，最后ID：{}", totalUpdated.get(), cursorBatchSize, lastId);
+            
+            // 8. 如果查询到的数据少于批次大小，说明已经是最后一批
+            if (cursorBatchSize < batchSize) {
+                break;
+            }
+            
+            // 9. 检查是否达到最大更新数量
+            if (maxCount != null && totalUpdated.get() >= maxCount) {
+                break;
+            }
+        }
+        
+        long endTime = System.currentTimeMillis();
+        long executionTime = endTime - startTime;
+        
+        log.info("基于游标ID的线程池批量更新完成，共更新{}条数据，耗时：{}ms", totalUpdated.get(), executionTime);
+        
+        return new UpdateResult(totalUpdated.get(), executionTime, executionTime / 1000.0, "游标ID线程池批量更新");
+    }
 }

@@ -172,4 +172,32 @@
         </foreach>
     </insert>
 
+    <!-- 基于主键ID的游标查询 -->
+    <select id="selectByCursorId" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM `t_aigc_evaluating`
+        <where>
+            <if test="lastId != null and lastId > 0">
+                AND id > #{lastId}
+            </if>
+        </where>
+        ORDER BY id ASC
+        LIMIT #{batchSize}
+    </select>
+
+    <!-- 基于创建时间的游标查询 -->
+    <select id="selectByCursorTime" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM `t_aigc_evaluating`
+        <where>
+            <if test="lastTime != null">
+                AND create_time > #{lastTime}
+            </if>
+        </where>
+        ORDER BY create_time ASC, id ASC
+        LIMIT #{batchSize}
+    </select>
+
 </mapper>
