@@ -1,10 +1,15 @@
 spring:
+  # ==================== 开发环境数据源配置 ====================
+  # 使用 Docker Compose 中的 MySQL 主库（端口 3307）
   datasource:
-    url: jdbc:mysql://localhost:3306/demo_dev?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
+    url: jdbc:mysql://localhost:3307/test_db?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
     username: root
-    password: root
+    password: 123456
 
+# ==================== 开发环境日志配置 ====================
 logging:
   level:
     com.lixiangyu: DEBUG
+    org.springframework: DEBUG
+    org.mybatis: DEBUG
 

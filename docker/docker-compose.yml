@@ -259,8 +259,6 @@ services:
     privileged: true
     depends_on:
       - rabbitmq-node1
-
-  # 10. Nacos 配置中心
   nacos:
     image: nacos/nacos-server:v2.3.2
     container_name: nacos
@@ -272,20 +270,20 @@ services:
       - "9848:9848"
     environment:
       - MODE=standalone
-      - SPRING_DATASOURCE_PLATFORM=mysql
-      - MYSQL_SERVICE_HOST=mysql-master
-      - MYSQL_SERVICE_PORT=3306
-      - MYSQL_SERVICE_USER=root
-      - MYSQL_SERVICE_PASSWORD=123456
-      - MYSQL_SERVICE_DB_NAME=nacos_config
       - TZ=Asia/Shanghai
-      - MYSQL_SERVICE_CONNECT_TIMEOUT=30000  # 新增：连接超时时间 30 秒，避免首次连接超时
-      - MYSQL_SERVICE_MAX_POOL_SIZE=20  # 数据库连接池最大连接数
-      - MYSQL_SERVICE_MIN_POOL_SIZE=5   # 数据库连接池最小连接数
-      - MYSQL_CONNECT_TIMEOUT=30000     # 数据库连接超时时间（30 秒，避免首次连接超时）
+      - JVM_XMS=256m
+      - JVM_XMX=256m
+      # 注释所有 MySQL 相关环境变量，避免与 jdbc.properties 冲突
+      # - SPRING_DATASOURCE_PLATFORM=mysql
+      # - MYSQL_HOST=mysql-master
+      # - MYSQL_PORT=3306
+      # - MYSQL_USER=root
+      # - MYSQL_PASSWORD=123456
+      # - MYSQL_DB=nacos_config
     volumes:
       - nacos-data:/home/nacos/data
       - nacos-data:/home/nacos/logs
+      - ./nacos-conf/jdbc.properties:/home/nacos/conf/jdbc.properties  # 核心：挂载自定义 jdbc.properties，覆盖内置配置
     privileged: true
     depends_on:
       - mysql-master

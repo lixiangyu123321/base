@@ -6,19 +6,147 @@ server:
 spring:
   application:
     name: demo
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  
+  # ==================== Nacos 配置导入 ====================
+  # Spring Cloud 2021.x 版本要求使用 spring.config.import 导入 Nacos 配置
+  # 格式：nacos:${spring.application.name}-${spring.profiles.active}.${file-extension}
+  # 注意：这里的格式必须与 file-extension 和 Nacos 中的实际 Data ID 格式一致
+  # 如果不需要 Nacos 配置，可以注释掉下面这行，并在 cloud.nacos.config 中设置 import-check.enabled=false
+  config:
+    import: nacos:${spring.application.name}-${spring.profiles.active}.json
+  
+  # ==================== Nacos 配置中心配置 ====================
+  # Docker Compose 中 Nacos 配置：
+  # - 控制台地址: http://localhost:8848/nacos
+  # - 默认用户名/密码: nacos / nacos
+  # 注意：Spring Boot 2.4+ 不再自动加载 bootstrap.yml，需要将 Nacos 配置放在 application.yml 中
+  cloud:
+    nacos:
+      config:
+        # Nacos 服务器地址（Docker Compose 端口映射：8848 -> 8848）
+        server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+        # 配置文件的命名空间（可选，用于环境隔离）
+        # 例如：dev、test、prod
+        namespace: ${NACOS_NAMESPACE:}
+        # 配置文件的 Data ID（默认使用 spring.application.name）
+        # 格式：${spring.application.name}-${spring.profiles.active}.${file-extension}
+        # 例如：demo-dev.yml
+        file-extension: json
+        # 配置分组（可选，默认为 DEFAULT_GROUP）
+        group: ${NACOS_CONFIG_GROUP:DEFAULT_GROUP}
+        # 是否启用配置中心（默认 true）
+        enabled: ${NACOS_CONFIG_ENABLED:true}
+        # 配置刷新（热更新）开关
+        refresh-enabled: true
+        # 导入检查开关（如果不需要 Nacos 配置，设置为 false 禁用检查）
+        import-check:
+          enabled: true
+      # ==================== Nacos 服务发现配置 ====================
+      # 服务发现配置（可选，如果只需要配置中心，可以注释掉）
+      discovery:
+        # Nacos 服务器地址（通常与 config.server-addr 相同）
+        server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+        # 命名空间（与服务发现隔离）
+        namespace: ${NACOS_NAMESPACE:}
+        # 是否启用服务发现（默认 true，如果只需要配置中心，可以设置为 false）
+        enabled: ${NACOS_DISCOVERY_ENABLED:false}
 
+  # ==================== 数据源配置 ====================
+  # 注意：如果使用主从分离，需要配置动态数据源（DynamicDataSource）
+  # 当前配置为单数据源（主库），如需使用从库，请配置动态数据源
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/test?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
-    username: lixiangyu
-    password:
+    # Docker Compose 中 MySQL 主库端口映射：3307 -> 3306
+    # 数据库名：test_db（Docker Compose 中自动创建）
+    url: jdbc:mysql://localhost:3307/test_db?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true
+    username: root
+    password: 123456
+    # HikariCP 连接池配置
     hikari:
-      minimum-idle: 5
-      maximum-pool-size: 20
-      connection-timeout: 30000
-      idle-timeout: 600000
-      max-lifetime: 1800000
+      minimum-idle: 5 # 最小空闲连接数
+      maximum-pool-size: 20 # 最大连接数
+      connection-timeout: 30000 # 获取连接的超时时间
+      idle-timeout: 600000 # 连接的空闲超时时间
+      max-lifetime: 1800000 # 连接的最大生命周期
+      connection-test-query: SELECT 1
+      # 连接池名称（便于监控）
+      pool-name: DemoHikariCP
 
+  # ==================== Redis 配置 ====================
+  # Docker Compose 中 Redis 集群配置：
+  # - redis-node1: localhost:6379
+  # - redis-node2: localhost:6380
+  # - redis-node3: localhost:6381
+  redis:
+    # Redis 集群模式配置
+    cluster:
+      nodes:
+        - localhost:6379
+        - localhost:6380
+        - localhost:6381
+      max-redirects: 3
+    # 连接超时时间（毫秒）
+    timeout: 3000
+    # Lettuce 连接池配置
+    lettuce:
+      pool:
+        max-active: 8
+        max-idle: 8
+        min-idle: 0
+        max-wait: -1
+      # 关闭超时时间（毫秒）
+      shutdown-timeout: 100ms
+
+  # ==================== Elasticsearch 配置 ====================
+  # Docker Compose 中 Elasticsearch 集群配置：
+  # - es-node1: localhost:9200
+  # - es-node2: localhost:9201
+  elasticsearch:
+    uris:
+      - http://localhost:9200
+      - http://localhost:9201
+    # 连接超时时间
+    connection-timeout: 1s
+    # Socket 超时时间
+    socket-timeout: 30s
+
+  # ==================== RabbitMQ 配置 ====================
+  # Docker Compose 中 RabbitMQ 集群配置：
+  # - rabbitmq-node1: localhost:5672 (管理界面: http://localhost:15672)
+  # - rabbitmq-node2: localhost:5673 (管理界面: http://localhost:15673)
+  # 管理界面登录：admin / 123456
+  rabbitmq:
+    # 集群地址（多个地址用逗号分隔）
+    addresses: localhost:5672,localhost:5673
+    username: admin
+    password: 123456
+    # 虚拟主机
+    virtual-host: /
+    # 发布确认机制
+    publisher-confirm-type: correlated
+    # 发布返回机制
+    publisher-returns: true
+    # 监听器配置
+    listener:
+      simple:
+        # 确认模式：manual（手动确认）、auto（自动确认）、none（不确认）
+        acknowledge-mode: manual
+        # 预取数量（每次从队列中获取的消息数量）
+        prefetch: 1
+        # 并发消费者数量
+        concurrency: 1
+        # 最大并发消费者数量
+        max-concurrency: 10
+        # 重试配置
+        retry:
+          enabled: true
+          initial-interval: 1000
+          max-attempts: 3
+          multiplier: 1.0
+
+# ==================== MyBatis 配置 ====================
 mybatis:
   # 引用 common 模块的全局配置
   config-location: classpath:mybatis/mybatis-config.xml
@@ -27,12 +155,18 @@ mybatis:
   # 扫描 dal 模块的实体类
   type-aliases-package: com.lixiangyu.dal.entity
 
-# 日志配置
+# ==================== 日志配置 ====================
 logging:
   level:
     root: INFO
     com.lixiangyu: DEBUG
     org.springframework: INFO
     org.mybatis: DEBUG
+    # Redis 日志
+    io.lettuce.core: INFO
+    # RabbitMQ 日志
+    org.springframework.amqp: INFO
+    # Elasticsearch 日志
+    org.elasticsearch: INFO
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n"

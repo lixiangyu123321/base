@@ -5,11 +5,15 @@ spring:
     active: ${SPRING_PROFILES_ACTIVE:dev}
   cloud:
     nacos:
-      # 配置中心配置
+      # ==================== Nacos 配置中心配置 ====================
+      # Docker Compose 中 Nacos 配置：
+      # - 控制台地址: http://localhost:8848/nacos
+      # - 默认用户名/密码: nacos / nacos
       config:
-        # Nacos 服务器地址
-        server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+        # Nacos 服务器地址（Docker Compose 端口映射：8848 -> 8848）
+        server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
         # 配置文件的命名空间（可选，用于环境隔离）
+        # 例如：dev、test、prod
         namespace: ${NACOS_NAMESPACE:}
         # 配置文件的 Data ID（默认使用 spring.application.name）
         # 格式：${spring.application.name}-${spring.profiles.active}.${file-extension}
@@ -21,16 +25,20 @@ spring:
         enabled: ${NACOS_CONFIG_ENABLED:true}
         # 配置刷新（热更新）开关
         refresh-enabled: true
+        # 导入检查开关（如果不需要 Nacos 配置，设置为 false 禁用检查）
+        import-check:
+          enabled: true
         # 共享配置（可选，多个 Data ID 用逗号分隔）
         # shared-configs:
         #   - data-id: shared-config.yml
         #     group: DEFAULT_GROUP
         #     refresh: true
+      # ==================== Nacos 服务发现配置 ====================
       # 服务发现配置（可选，如果只需要配置中心，可以注释掉）
       discovery:
         # Nacos 服务器地址（通常与 config.server-addr 相同）
-        server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
-        # 命名空间
+        server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+        # 命名空间（与服务发现隔离）
         namespace: ${NACOS_NAMESPACE:}
         # 是否启用服务发现（默认 true，如果只需要配置中心，可以设置为 false）
         enabled: ${NACOS_DISCOVERY_ENABLED:false}

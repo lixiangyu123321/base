@@ -1,11 +1,24 @@
 spring:
+  # ==================== 生产环境数据源配置 ====================
+  # 使用 Docker Compose 中的 MySQL 主库（端口 3307）
+  # 注意：生产环境建议使用独立的数据库服务器，不要使用 Docker 容器
   datasource:
-    url: jdbc:mysql://localhost:3306/demo_prod?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
+    url: jdbc:mysql://localhost:3307/test_db?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
     username: root
-    password: root
+    password: 123456
+    # 生产环境连接池配置（建议增大连接池）
+    hikari:
+      minimum-idle: 10
+      maximum-pool-size: 50
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
 
+# ==================== 生产环境日志配置 ====================
 logging:
   level:
     com.lixiangyu: INFO
     root: WARN
+    org.springframework: WARN
+    org.mybatis: WARN
 

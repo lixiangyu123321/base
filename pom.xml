@@ -58,6 +58,13 @@
             <version>${lombok.version}</version>
             <optional>true</optional>
         </dependency>
+
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>fastjson</artifactId>
+            <!-- 推荐使用稳定版，避免使用过时的 1.2.x 版本（存在安全漏洞） -->
+            <version>2.0.49</version>
+        </dependency>
     </dependencies>
 
     <!-- dependencyManagement：依赖版本管控，子工程需按需导入 -->
@@ -226,11 +233,17 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.8.1</version>
                 <configuration>
-                    <source>${java.version}</source>
-                    <target>${java.version}</target>
+                    <!-- 强制使用 Java 1.8 编译，不使用变量避免版本不一致 -->
+                    <source>1.8</source>
+                    <target>1.8</target>
                     <encoding>${project.build.sourceEncoding}</encoding>
+                    <!-- 确保使用正确的 JDK -->
+                    <fork>true</fork>
                     <compilerArgs>
                         <arg>-parameters</arg>
+                        <!-- 编译警告 -->
+                        <arg>-Xlint:unchecked</arg>
+                        <arg>-Xlint:deprecation</arg>
                     </compilerArgs>
                     <annotationProcessorPaths>
                         <path>

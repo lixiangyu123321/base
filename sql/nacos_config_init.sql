@@ -245,3 +245,12 @@ INSERT INTO `users` VALUES ('nacos', '$2a$10$EuWPZHzz32dJN7jexM34MOeYirDdFAZm2ku
 INSERT INTO `roles` VALUES ('nacos', 'ROLE_ADMIN');
 
 SET FOREIGN_KEY_CHECKS = 1;
+
+alter table config_info
+    modify encrypted_data_key text null;
+
+alter table his_config_info
+    modify encrypted_data_key text null;
+
+alter table config_info_beta
+    add type varchar(50) null;
