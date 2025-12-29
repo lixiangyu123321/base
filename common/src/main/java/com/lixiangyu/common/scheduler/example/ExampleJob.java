@@ -2,7 +2,7 @@ package com.lixiangyu.common.scheduler.example;
 
 import com.lixiangyu.common.scheduler.annotation.ScheduledJob;
 import com.lixiangyu.common.scheduler.core.Job;
-import com.lixiangyu.common.scheduler.entity.JobConfig;
+import com.lixiangyu.dal.entity.job.JobConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 

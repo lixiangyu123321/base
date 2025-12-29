@@ -17,10 +17,10 @@
 
     <dependencies>
         <!-- 依赖 common 模块 -->
-        <dependency>
-            <groupId>com.lixiangyu</groupId>
-            <artifactId>common</artifactId>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>com.lixiangyu</groupId>-->
+<!--            <artifactId>common</artifactId>-->
+<!--        </dependency>-->
         
         <!-- MyBatis 相关依赖 -->
         <dependency>

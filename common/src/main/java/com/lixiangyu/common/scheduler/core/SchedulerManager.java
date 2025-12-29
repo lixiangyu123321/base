@@ -1,6 +1,6 @@
 package com.lixiangyu.common.scheduler.core;
 
-import com.lixiangyu.common.scheduler.entity.JobConfig;
+import com.lixiangyu.dal.entity.job.JobConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 

@@ -1,8 +1,8 @@
 package com.lixiangyu.controller;
 
 import com.lixiangyu.common.scheduler.core.JobExecutor;
-import com.lixiangyu.common.scheduler.entity.JobConfig;
-import com.lixiangyu.common.scheduler.entity.JobLog;
+import com.lixiangyu.dal.entity.job.JobConfig;
+import com.lixiangyu.dal.entity.job.JobLog;
 import com.lixiangyu.common.scheduler.service.JobConfigService;
 import com.lixiangyu.common.scheduler.service.JobLogService;
 import com.lixiangyu.common.util.Result;

@@ -2,7 +2,7 @@ package com.lixiangyu.common.scheduler.core;
 
 import com.lixiangyu.common.config.DynamicConfigManager;
 import com.lixiangyu.common.scheduler.annotation.ScheduledJob;
-import com.lixiangyu.common.scheduler.entity.JobConfig;
+import com.lixiangyu.dal.entity.job.JobConfig;
 import com.lixiangyu.common.scheduler.service.JobConfigService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

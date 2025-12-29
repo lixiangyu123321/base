@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.lixiangyu.common.scheduler.mapper.JobConfigMapper">
+<mapper namespace="com.lixiangyu.dal.mapper.JobConfigMapper">
     
-    <resultMap id="BaseResultMap" type="com.lixiangyu.common.scheduler.entity.JobConfig">
+    <resultMap id="BaseResultMap" type="com.lixiangyu.dal.entity.job.JobConfig">
         <id column="id" property="id" jdbcType="BIGINT"/>
         <result column="job_name" property="jobName" jdbcType="VARCHAR"/>
         <result column="job_group" property="jobGroup" jdbcType="VARCHAR"/>
@@ -51,6 +51,42 @@
         </if>
         ORDER BY create_time DESC
     </select>
+    
+    <!-- 根据主键ID查询（不使用乐观锁） -->
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT * FROM scheduler_job_config
+        WHERE id = #{id}
+    </select>
+    
+    <!-- 根据主键ID更新（不使用乐观锁，只更新非空字段） -->
+    <update id="updateByIdSelective">
+        UPDATE scheduler_job_config
+        <set>
+            <if test="jobName != null">job_name = #{jobName},</if>
+            <if test="jobGroup != null">job_group = #{jobGroup},</if>
+            <if test="jobType != null">job_type = #{jobType},</if>
+            <if test="jobClass != null">job_class = #{jobClass},</if>
+            <if test="cronExpression != null">cron_expression = #{cronExpression},</if>
+            <if test="jobParams != null">job_params = #{jobParams, typeHandler=com.lixiangyu.common.scheduler.typehandler.JsonTypeHandler},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="environment != null">environment = #{environment},</if>
+            <if test="retryCount != null">retry_count = #{retryCount},</if>
+            <if test="retryInterval != null">retry_interval = #{retryInterval},</if>
+            <if test="timeout != null">timeout = #{timeout},</if>
+            <if test="alertEnabled != null">alert_enabled = #{alertEnabled},</if>
+            <if test="alertTypes != null">alert_types = #{alertTypes, typeHandler=com.lixiangyu.common.scheduler.typehandler.AlertTypeListTypeHandler},</if>
+            <if test="alertReceivers != null">alert_receivers = #{alertReceivers, typeHandler=com.lixiangyu.common.scheduler.typehandler.AlertReceiversTypeHandler},</if>
+            <if test="grayReleaseEnabled != null">gray_release_enabled = #{grayReleaseEnabled},</if>
+            <if test="grayReleasePercent != null">gray_release_percent = #{grayReleasePercent},</if>
+            <if test="version != null">version = #{version},</if>
+            <if test="creator != null">creator = #{creator},</if>
+            <if test="modifier != null">modifier = #{modifier},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
     
 </mapper>
 

@@ -3,7 +3,7 @@ package com.lixiangyu.common.scheduler.core;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.lixiangyu.common.config.DynamicConfigManager;
-import com.lixiangyu.common.scheduler.entity.JobConfig;
+import com.lixiangyu.dal.entity.job.JobConfig;
 import com.lixiangyu.common.scheduler.service.JobConfigService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -60,9 +60,11 @@ public class JobConfigChangeListener {
             return;
         }
         
-        // 注册监听器
-        configManager.addListener(dataId, (key, newValue) -> {
+        // 注册监听器（指定 Data ID，监听整个 Data ID 的变更）
+        // 注意：这里传入 dataId 作为 key，同时指定 dataId 参数，表示监听整个 Data ID 的变更
+        configManager.addListener(dataId, dataId, (key, newValue) -> {
             try {
+                // key 是 Data ID，newValue 是整个配置内容（JSON 字符串）
                 handleConfigChange(key, newValue);
             } catch (Exception e) {
                 log.error("处理配置变更失败，Key: {}", key, e);
@@ -123,16 +125,31 @@ public class JobConfigChangeListener {
                 // 如果数据库中没有，从 Nacos 配置创建新配置
                 existingConfig = createConfigFromNacos(keyInfo, configJson);
             } else {
-                // 更新配置
+                // 更新配置（注意：updateConfigFromNacos 内部会重新查询数据库获取最新配置）
                 updateConfigFromNacos(existingConfig, configJson);
+                
+                // 更新后重新查询获取最新配置（包含更新后的状态）
+                existingConfig = jobConfigService.getById(existingConfig.getId());
             }
             
             // 如果状态变更，更新调度器
             String newStatus = configJson.getString("status");
-            if (newStatus != null) {
+            if (newStatus != null && existingConfig != null) {
                 JobConfig.JobStatus status = JobConfig.JobStatus.valueOf(newStatus);
                 if (status != existingConfig.getStatus()) {
                     updateScheduler(existingConfig, status);
+                } else {
+                    // 即使状态没有变更，如果 Cron 表达式变更了，也需要更新调度器
+                    String newCronExpression = configJson.getString("cronExpression");
+                    if (newCronExpression != null && !newCronExpression.equals(existingConfig.getCronExpression())) {
+                        // Cron 表达式变更，需要更新调度器
+                        try {
+                            schedulerManager.updateJob(existingConfig);
+                            log.info("任务 Cron 表达式已更新，Job ID: {}, Cron: {}", existingConfig.getId(), newCronExpression);
+                        } catch (Exception e) {
+                            log.error("更新任务 Cron 表达式失败，Job ID: {}", existingConfig.getId(), e);
+                        }
+                    }
                 }
             }
             
@@ -191,9 +208,17 @@ public class JobConfigChangeListener {
      * @param configJson Nacos 配置 JSON
      */
     private void updateConfigFromNacos(JobConfig config, JSONObject configJson) {
+        // 重要：重新查询数据库获取最新配置，确保乐观锁的 WHERE 条件正确
+        // 因为 updateByPrimaryKeySelective 使用乐观锁，WHERE 条件包含所有字段
+        JobConfig latestConfig = jobConfigService.getById(config.getId());
+        if (latestConfig == null) {
+            log.warn("数据库中没有找到配置，ID: {}", config.getId());
+            return;
+        }
+        
         // 更新 Cron 表达式
         if (configJson.containsKey("cronExpression")) {
-            config.setCronExpression(configJson.getString("cronExpression"));
+            latestConfig.setCronExpression(configJson.getString("cronExpression"));
         }
         
         // 更新任务参数
@@ -202,43 +227,51 @@ public class JobConfigChangeListener {
             if (jobParams instanceof JSONObject) {
                 @SuppressWarnings("unchecked")
                 java.util.Map<String, Object> params = (java.util.Map<String, Object>) jobParams;
-                config.setJobParams(params);
+                latestConfig.setJobParams(params);
             }
         }
         
         // 更新描述
         if (configJson.containsKey("description")) {
-            config.setDescription(configJson.getString("description"));
+            latestConfig.setDescription(configJson.getString("description"));
         }
         
         // 更新状态
         if (configJson.containsKey("status")) {
             String statusStr = configJson.getString("status");
             if (statusStr != null) {
-                config.setStatus(JobConfig.JobStatus.valueOf(statusStr));
+                latestConfig.setStatus(JobConfig.JobStatus.valueOf(statusStr));
             }
         }
         
         // 更新重试配置
         if (configJson.containsKey("retryCount")) {
-            config.setRetryCount(configJson.getInteger("retryCount"));
+            latestConfig.setRetryCount(configJson.getInteger("retryCount"));
         }
         if (configJson.containsKey("retryInterval")) {
-            config.setRetryInterval(configJson.getInteger("retryInterval"));
+            latestConfig.setRetryInterval(configJson.getInteger("retryInterval"));
         }
         
         // 更新超时时间
         if (configJson.containsKey("timeout")) {
-            config.setTimeout(configJson.getInteger("timeout"));
+            latestConfig.setTimeout(configJson.getInteger("timeout"));
         }
         
         // 更新告警配置
         if (configJson.containsKey("alertEnabled")) {
-            config.setAlertEnabled(configJson.getBoolean("alertEnabled"));
+            latestConfig.setAlertEnabled(configJson.getBoolean("alertEnabled"));
         }
         
-        // 保存到数据库
-        jobConfigService.update(config);
+        // 更新灰度发布配置
+        if (configJson.containsKey("grayReleaseEnabled")) {
+            latestConfig.setGrayReleaseEnabled(configJson.getBoolean("grayReleaseEnabled"));
+        }
+        if (configJson.containsKey("grayReleasePercent")) {
+            latestConfig.setGrayReleasePercent(configJson.getInteger("grayReleasePercent"));
+        }
+        
+        // 保存到数据库（使用最新查询的配置，确保乐观锁正确）
+        jobConfigService.update(latestConfig);
     }
     
     /**

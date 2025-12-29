@@ -1,7 +1,6 @@
 package com.lixiangyu.common.migration.operator;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
 
 import javax.sql.DataSource;
 import java.sql.*;
@@ -12,10 +11,11 @@ import java.util.List;
  * JDBC 原生接口实现
  * 使用 JDBC 原生 API 操作数据库
  * 
+ * 注意：此类由 DatabaseOperatorFactory 创建，不应被 Spring 自动管理
+ * 
  * @author lixiangyu
  */
 @Slf4j
-@Component
 public class JdbcDatabaseOperator implements DatabaseOperator {
     
     private final DataSource dataSource;

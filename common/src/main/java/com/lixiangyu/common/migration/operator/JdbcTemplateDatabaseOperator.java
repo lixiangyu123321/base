@@ -2,7 +2,6 @@ package com.lixiangyu.common.migration.operator;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.stereotype.Component;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -14,10 +13,11 @@ import java.util.List;
  * Spring JDBC Template 实现
  * 使用 Spring JdbcTemplate 操作数据库
  * 
+ * 注意：此类由 DatabaseOperatorFactory 创建，不应被 Spring 自动管理
+ * 
  * @author lixiangyu
  */
 @Slf4j
-@Component
 public class JdbcTemplateDatabaseOperator implements DatabaseOperator {
     
     private final JdbcTemplate jdbcTemplate;

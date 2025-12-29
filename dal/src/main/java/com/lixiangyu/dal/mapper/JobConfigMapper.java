@@ -1,6 +1,6 @@
-package com.lixiangyu.common.scheduler.mapper;
+package com.lixiangyu.dal.mapper;
 
-import com.lixiangyu.common.scheduler.entity.JobConfig;
+import com.lixiangyu.dal.entity.job.JobConfig;
 import org.apache.ibatis.annotations.Param;
 import tk.mybatis.mapper.common.Mapper;
 import tk.mybatis.mapper.common.MySqlMapper;
@@ -43,5 +43,21 @@ public interface JobConfigMapper extends Mapper<JobConfig>, MySqlMapper<JobConfi
      * @return 任务配置列表
      */
     List<JobConfig> selectAllWithEnvironment(@Param("environment") String environment);
+    
+    /**
+     * 根据主键ID查询（不使用乐观锁）
+     *
+     * @param id 主键ID
+     * @return 任务配置
+     */
+    JobConfig selectById(@Param("id") Long id);
+    
+    /**
+     * 根据主键ID更新（不使用乐观锁，只更新非空字段）
+     *
+     * @param config 任务配置
+     * @return 更新的记录数
+     */
+    int updateByIdSelective(JobConfig config);
 }
 

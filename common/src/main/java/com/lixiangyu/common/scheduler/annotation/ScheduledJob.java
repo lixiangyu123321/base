@@ -1,6 +1,6 @@
 package com.lixiangyu.common.scheduler.annotation;
 
-import com.lixiangyu.common.scheduler.entity.JobConfig;
+import com.lixiangyu.dal.entity.job.JobConfig;
 
 import java.lang.annotation.*;
 

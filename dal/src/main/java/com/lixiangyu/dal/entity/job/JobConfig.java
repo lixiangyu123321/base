@@ -1,10 +1,11 @@
-package com.lixiangyu.common.scheduler.entity;
+package com.lixiangyu.dal.entity.job;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import javax.persistence.Table;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -18,6 +19,7 @@ import java.util.Map;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Table(name = "scheduler_job_config")
 public class JobConfig {
     
     /**

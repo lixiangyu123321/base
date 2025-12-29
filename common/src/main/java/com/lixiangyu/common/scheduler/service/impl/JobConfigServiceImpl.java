@@ -1,8 +1,8 @@
 package com.lixiangyu.common.scheduler.service.impl;
 
-import com.lixiangyu.common.scheduler.entity.JobConfig;
-import com.lixiangyu.common.scheduler.mapper.JobConfigMapper;
+import com.lixiangyu.dal.entity.job.JobConfig;
 import com.lixiangyu.common.scheduler.service.JobConfigService;
+import com.lixiangyu.dal.mapper.JobConfigMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -50,19 +50,26 @@ public class JobConfigServiceImpl implements JobConfigService {
         if (config.getVersion() != null) {
             config.setVersion(config.getVersion() + 1);
         } else {
-            JobConfig existing = jobConfigMapper.selectByPrimaryKey(config.getId());
+            // 使用自定义的 selectById 方法，避免 tk.mybatis 的乐观锁问题
+            JobConfig existing = jobConfigMapper.selectById(config.getId());
             if (existing != null) {
                 config.setVersion(existing.getVersion() + 1);
             }
         }
-        jobConfigMapper.updateByPrimaryKeySelective(config);
-        log.info("更新任务配置成功，Job ID: {}, Name: {}", config.getId(), config.getJobName());
+        // 使用自定义的 updateByIdSelective 方法，避免 tk.mybatis 的乐观锁问题
+        int updated = jobConfigMapper.updateByIdSelective(config);
+        if (updated == 0) {
+            log.warn("更新任务配置失败，未找到对应记录，Job ID: {}, Name: {}", config.getId(), config.getJobName());
+        } else {
+            log.info("更新任务配置成功，Job ID: {}, Name: {}", config.getId(), config.getJobName());
+        }
         return config;
     }
     
     @Override
     public JobConfig getById(Long id) {
-        return jobConfigMapper.selectByPrimaryKey(id);
+        // 使用自定义的 selectById 方法，避免 tk.mybatis 的乐观锁问题
+        return jobConfigMapper.selectById(id);
     }
     
     @Override
@@ -94,7 +101,8 @@ public class JobConfigServiceImpl implements JobConfigService {
         if (config != null) {
             config.setStatus(JobConfig.JobStatus.RUNNING);
             config.setUpdateTime(new Date());
-            jobConfigMapper.updateByPrimaryKeySelective(config);
+            // 使用自定义的 updateByIdSelective 方法，避免 tk.mybatis 的乐观锁问题
+            jobConfigMapper.updateByIdSelective(config);
             log.info("启用任务成功，Job ID: {}", id);
         }
     }
@@ -106,7 +114,8 @@ public class JobConfigServiceImpl implements JobConfigService {
         if (config != null) {
             config.setStatus(JobConfig.JobStatus.STOPPED);
             config.setUpdateTime(new Date());
-            jobConfigMapper.updateByPrimaryKeySelective(config);
+            // 使用自定义的 updateByIdSelective 方法，避免 tk.mybatis 的乐观锁问题
+            jobConfigMapper.updateByIdSelective(config);
             log.info("禁用任务成功，Job ID: {}", id);
         }
     }
@@ -118,7 +127,8 @@ public class JobConfigServiceImpl implements JobConfigService {
         if (config != null) {
             config.setStatus(JobConfig.JobStatus.PAUSED);
             config.setUpdateTime(new Date());
-            jobConfigMapper.updateByPrimaryKeySelective(config);
+            // 使用自定义的 updateByIdSelective 方法，避免 tk.mybatis 的乐观锁问题
+            jobConfigMapper.updateByIdSelective(config);
             log.info("暂停任务成功，Job ID: {}", id);
         }
     }
@@ -130,7 +140,8 @@ public class JobConfigServiceImpl implements JobConfigService {
         if (config != null) {
             config.setStatus(JobConfig.JobStatus.RUNNING);
             config.setUpdateTime(new Date());
-            jobConfigMapper.updateByPrimaryKeySelective(config);
+            // 使用自定义的 updateByIdSelective 方法，避免 tk.mybatis 的乐观锁问题
+            jobConfigMapper.updateByIdSelective(config);
             log.info("恢复任务成功，Job ID: {}", id);
         }
     }

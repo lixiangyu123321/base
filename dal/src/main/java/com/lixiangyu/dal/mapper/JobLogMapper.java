@@ -1,6 +1,6 @@
-package com.lixiangyu.common.scheduler.mapper;
+package com.lixiangyu.dal.mapper;
 
-import com.lixiangyu.common.scheduler.entity.JobLog;
+import com.lixiangyu.dal.entity.job.JobLog;
 import tk.mybatis.mapper.common.Mapper;
 import tk.mybatis.mapper.common.MySqlMapper;
 

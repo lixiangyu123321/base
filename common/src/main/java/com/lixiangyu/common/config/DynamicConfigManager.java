@@ -317,25 +317,51 @@ public class DynamicConfigManager implements ApplicationListener<EnvironmentChan
     }
 
     /**
-     * 注册配置变更监听器
+     * 注册配置变更监听器（使用主 Data ID）
      *
      * @param key 配置键
      * @param listener 监听器
      */
     public void addListener(String key, ConfigChangeListener listener) {
+        addListener(key, null, listener);
+    }
+    
+    /**
+     * 注册配置变更监听器（支持指定 Data ID）
+     *
+     * @param key 配置键（用于标识监听器，可以是配置键或 Data ID）
+     * @param dataId 要监听的 Data ID（如果为 null，则使用主 Data ID）
+     * @param listener 监听器
+     */
+    public void addListener(String key, String dataId, ConfigChangeListener listener) {
         // 添加到监听器列表
         listeners.computeIfAbsent(key, k -> new ArrayList<>()).add(listener);
         
         // 如果启用 Nacos，注册 Nacos 监听器
         if (nacosEnabled && configService != null) {
             try {
+                // 确定要监听的 Data ID
+                String targetDataId = StringUtils.hasText(dataId) ? dataId : mainDataId;
+                
                 // 创建 Nacos 监听器适配器
-                Listener nacosListener = new NacosListenerAdapter(key, listener);
-                configService.addListener(mainDataId, group, nacosListener);
+                // 如果指定了 dataId，说明是监听整个 Data ID 的变更（如任务配置的独立 Data ID）
+                // 如果未指定 dataId，说明是监听主 Data ID 中某个 key 的变更
+                Listener nacosListener;
+                if (StringUtils.hasText(dataId)) {
+                    // 监听整个 Data ID 的变更，传入完整的配置内容
+                    nacosListener = new NacosDataIdListenerAdapter(key, dataId, listener);
+                } else {
+                    // 监听主 Data ID 中某个 key 的变更
+                    nacosListener = new NacosListenerAdapter(key, listener);
+                }
+                
+                configService.addListener(targetDataId, group, nacosListener);
                 nacosListeners.put(key, nacosListener);
-                log.info("注册配置变更监听器成功，Key: {}, Data ID: {}", key, mainDataId);
+                // 记录监听器对应的 Data ID，用于销毁时正确移除
+                listenerDataIdMap.put(key, targetDataId);
+                log.info("注册配置变更监听器成功，Key: {}, Data ID: {}", key, targetDataId);
             } catch (NacosException e) {
-                log.error("注册 Nacos 配置变更监听器失败，Key: {}", key, e);
+                log.error("注册 Nacos 配置变更监听器失败，Key: {}, Data ID: {}", key, dataId, e);
                 // 即使 Nacos 监听器注册失败，也保留本地监听器
             }
         } else {
@@ -349,18 +375,33 @@ public class DynamicConfigManager implements ApplicationListener<EnvironmentChan
      * @param key 配置键
      */
     public void removeListener(String key) {
+        removeListener(key, null);
+    }
+    
+    /**
+     * 移除配置变更监听器（支持指定 Data ID）
+     *
+     * @param key 配置键
+     * @param dataId 要移除监听的 Data ID（如果为 null，则使用主 Data ID）
+     */
+    public void removeListener(String key, String dataId) {
         // 移除本地监听器
         listeners.remove(key);
         
         // 移除 Nacos 监听器
-        if (nacosEnabled && configService != null && mainDataId != null) {
+        if (nacosEnabled && configService != null) {
             Listener nacosListener = nacosListeners.remove(key);
             if (nacosListener != null) {
                 try {
-                    configService.removeListener(mainDataId, group, nacosListener);
-                    log.info("移除配置变更监听器成功，Key: {}", key);
+                    // 优先使用传入的 dataId，否则从映射中获取，最后使用主 Data ID
+                    String targetDataId = StringUtils.hasText(dataId) 
+                            ? dataId 
+                            : listenerDataIdMap.getOrDefault(key, mainDataId);
+                    configService.removeListener(targetDataId, group, nacosListener);
+                    listenerDataIdMap.remove(key);
+                    log.info("移除配置变更监听器成功，Key: {}, Data ID: {}", key, targetDataId);
                 } catch (Exception e) {
-                    log.error("移除 Nacos 配置变更监听器失败，Key: {}", key, e);
+                    log.error("移除 Nacos 配置变更监听器失败，Key: {}, Data ID: {}", key, dataId, e);
                 }
             }
         }
@@ -473,20 +514,29 @@ public class DynamicConfigManager implements ApplicationListener<EnvironmentChan
     }
 
     /**
+     * 存储监听器信息（Key -> Data ID 的映射）
+     * 用于销毁时正确移除监听器
+     */
+    private final Map<String, String> listenerDataIdMap = new ConcurrentHashMap<>();
+    
+    /**
      * 销毁时清理资源
      */
     @PreDestroy
     public void destroy() {
         // 移除所有 Nacos 监听器
-        if (nacosEnabled && configService != null && mainDataId != null) {
+        if (nacosEnabled && configService != null) {
             for (Map.Entry<String, Listener> entry : nacosListeners.entrySet()) {
                 try {
-                    configService.removeListener(mainDataId, group, entry.getValue());
+                    String dataId = listenerDataIdMap.getOrDefault(entry.getKey(), mainDataId);
+                    configService.removeListener(dataId, group, entry.getValue());
                 } catch (Exception e) {
-                    log.error("移除 Nacos 监听器失败，Key: {}", entry.getKey(), e);
+                    log.error("移除 Nacos 监听器失败，Key: {}, Data ID: {}", 
+                            entry.getKey(), listenerDataIdMap.get(entry.getKey()), e);
                 }
             }
             nacosListeners.clear();
+            listenerDataIdMap.clear();
         }
         
         // 清除监听器列表
@@ -501,6 +551,7 @@ public class DynamicConfigManager implements ApplicationListener<EnvironmentChan
     /**
      * Nacos 监听器适配器
      * 将 Nacos 的 Listener 适配为 ConfigChangeListener
+     * 用于监听主 Data ID 中某个 key 的变更
      */
     private class NacosListenerAdapter implements Listener {
         private final String key;
@@ -528,6 +579,43 @@ public class DynamicConfigManager implements ApplicationListener<EnvironmentChan
                 }
             } catch (Exception e) {
                 log.error("处理 Nacos 配置变更通知失败，Key: {}", key, e);
+            }
+        }
+
+        @Override
+        public Executor getExecutor() {
+            return null; // 使用默认执行器
+        }
+    }
+    
+    /**
+     * Nacos Data ID 监听器适配器
+     * 用于监听整个 Data ID 的变更（如任务配置的独立 Data ID）
+     * 当 Data ID 的整个内容变更时，将整个配置内容传递给监听器
+     */
+    private class NacosDataIdListenerAdapter implements Listener {
+        private final String key;
+        private final String dataId;
+        private final ConfigChangeListener listener;
+
+        public NacosDataIdListenerAdapter(String key, String dataId, ConfigChangeListener listener) {
+            this.key = key;
+            this.dataId = dataId;
+            this.listener = listener;
+        }
+
+        @Override
+        public void receiveConfigInfo(String configInfo) {
+            try {
+                // 对于独立的 Data ID，直接传递整个配置内容
+                if (StringUtils.hasText(configInfo)) {
+                    // 通知监听器，key 是 Data ID，newValue 是整个配置内容
+                    listener.onChange(key, configInfo);
+                    
+                    log.info("Nacos Data ID 配置变更通知，Data ID: {}, Key: {}", dataId, key);
+                }
+            } catch (Exception e) {
+                log.error("处理 Nacos Data ID 配置变更通知失败，Data ID: {}, Key: {}", dataId, key, e);
             }
         }
 

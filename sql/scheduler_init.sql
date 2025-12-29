@@ -121,3 +121,8 @@ CREATE TABLE IF NOT EXISTS `scheduler_config_change` (
   KEY `idx_change_time` (`change_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='配置变更记录表';
 
+
+alter table scheduler_job_config
+    alter column job_type set default 'QUARTZ';
+
+

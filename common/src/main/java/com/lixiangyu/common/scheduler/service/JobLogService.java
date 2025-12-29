@@ -1,6 +1,6 @@
 package com.lixiangyu.common.scheduler.service;
 
-import com.lixiangyu.common.scheduler.entity.JobLog;
+import com.lixiangyu.dal.entity.job.JobLog;
 
 import java.util.List;
 

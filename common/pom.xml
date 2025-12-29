@@ -17,6 +17,13 @@
     <description>公共基础模块，包含通用工具类、常量、配置等</description>
 
     <dependencies>
+
+        <!-- 依赖 dal 模块（用于访问实体类） -->
+        <dependency>
+            <groupId>com.lixiangyu</groupId>
+            <artifactId>dal</artifactId>
+        </dependency>
+
         <!-- Spring Context（包含 @Component、@Autowired 等注解） -->
         <dependency>
             <groupId>org.springframework</groupId>

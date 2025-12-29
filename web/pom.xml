@@ -98,10 +98,18 @@
                     <encoding>${project.build.sourceEncoding}</encoding>
                     <!-- 确保使用正确的 JDK -->
                     <fork>true</fork>
+                    <!-- 使用运行时的 JDK（确保是 Java 8） -->
                     <compilerArgs>
                         <arg>-parameters</arg>
                         <arg>-Xlint:unchecked</arg>
                         <arg>-Xlint:deprecation</arg>
+                        <!-- 强制 Java 8 字节码版本（双重保险） -->
+                        <arg>-target</arg>
+                        <arg>1.8</arg>
+                        <arg>-source</arg>
+                        <arg>1.8</arg>
+                        <!-- 禁止使用预览特性 -->
+                        <arg>-Xlint:-options</arg>
                     </compilerArgs>
                     <annotationProcessorPaths>
                         <path>

@@ -2,7 +2,6 @@ package com.lixiangyu.common.migration.operator;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.stereotype.Component;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -18,31 +17,169 @@ import java.util.List;
  * @author lixiangyu
  */
 @Slf4j
-@Component
 public class MyBatisDatabaseOperator implements DatabaseOperator {
     
-    private final Object sqlSessionTemplate;
+    /**
+     * SqlSessionTemplate 包装类
+     * 使用包装类避免直接依赖 MyBatis 类型，同时保持类型安全
+     */
+    private final SqlSessionTemplateWrapper sqlSessionTemplateWrapper;
+    
+    /**
+     * SqlSessionFactory 包装类
+     * 保留用于未来扩展
+     */
+    @SuppressWarnings("unused")
+    private final SqlSessionFactoryWrapper sqlSessionFactoryWrapper;
+    
+    /**
+     * JdbcTemplate（用于降级操作）
+     */
     private final JdbcTemplate jdbcTemplate;
+    
+    /**
+     * 数据源
+     */
     private final DataSource dataSource;
     
+    /**
+     * 构造函数
+     * 
+     * @param sqlSessionFactory SqlSessionFactory 实例（通过反射获取）
+     * @param sqlSessionTemplate SqlSessionTemplate 实例（通过反射获取）
+     * @param dataSource 数据源
+     */
     public MyBatisDatabaseOperator(Object sqlSessionFactory, 
                                    Object sqlSessionTemplate,
                                    DataSource dataSource) {
-        // sqlSessionFactory 保留参数以保持接口一致性，但当前实现主要使用 sqlSessionTemplate
-        this.sqlSessionTemplate = sqlSessionTemplate;
+        if (sqlSessionTemplate == null) {
+            throw new IllegalArgumentException("SqlSessionTemplate 不能为 null");
+        }
+        if (dataSource == null) {
+            throw new IllegalArgumentException("DataSource 不能为 null");
+        }
+        this.sqlSessionTemplateWrapper = new SqlSessionTemplateWrapper(sqlSessionTemplate);
+        this.sqlSessionFactoryWrapper = new SqlSessionFactoryWrapper(sqlSessionFactory);
         this.dataSource = dataSource;
         this.jdbcTemplate = new JdbcTemplate(dataSource);
     }
     
+    /**
+     * SqlSessionTemplate 包装类
+     * 封装反射调用，提供类型安全的接口
+     */
+    private static class SqlSessionTemplateWrapper {
+        private final Object sqlSessionTemplate;
+        
+        public SqlSessionTemplateWrapper(Object sqlSessionTemplate) {
+            this.sqlSessionTemplate = sqlSessionTemplate;
+        }
+        
+        /**
+         * 获取数据库连接
+         */
+        public Connection getConnection() {
+            try {
+                return (Connection) sqlSessionTemplate.getClass()
+                        .getMethod("getConnection")
+                        .invoke(sqlSessionTemplate);
+            } catch (Exception e) {
+                throw new RuntimeException("获取连接失败", e);
+            }
+        }
+        
+        /**
+         * 获取 SqlSession
+         */
+        @SuppressWarnings("unused")
+        public SqlSessionWrapper getSqlSession() {
+            try {
+                Object sqlSession = sqlSessionTemplate.getClass()
+                        .getMethod("getSqlSession")
+                        .invoke(sqlSessionTemplate);
+                return new SqlSessionWrapper(sqlSession);
+            } catch (Exception e) {
+                throw new RuntimeException("获取 SqlSession 失败", e);
+            }
+        }
+    }
+    
+    /**
+     * SqlSessionFactory 包装类
+     * 保留用于未来扩展
+     */
+    private static class SqlSessionFactoryWrapper {
+        private final Object sqlSessionFactory;
+        
+        public SqlSessionFactoryWrapper(Object sqlSessionFactory) {
+            this.sqlSessionFactory = sqlSessionFactory;
+        }
+        
+        /**
+         * 打开 SqlSession
+         */
+        @SuppressWarnings("unused")
+        public SqlSessionWrapper openSession() {
+            try {
+                Object sqlSession = sqlSessionFactory.getClass()
+                        .getMethod("openSession")
+                        .invoke(sqlSessionFactory);
+                return new SqlSessionWrapper(sqlSession);
+            } catch (Exception e) {
+                throw new RuntimeException("打开 SqlSession 失败", e);
+            }
+        }
+    }
+    
+    /**
+     * SqlSession 包装类
+     */
+    private static class SqlSessionWrapper {
+        private final Object sqlSession;
+        
+        public SqlSessionWrapper(Object sqlSession) {
+            this.sqlSession = sqlSession;
+        }
+        
+        /**
+         * 执行查询
+         */
+        @SuppressWarnings("unused")
+        public <T> List<T> selectList(String statement, Object parameter) {
+            try {
+                @SuppressWarnings("unchecked")
+                List<T> result = (List<T>) sqlSession.getClass()
+                        .getMethod("selectList", String.class, Object.class)
+                        .invoke(sqlSession, statement, parameter);
+                return result;
+            } catch (Exception e) {
+                throw new RuntimeException("执行查询失败", e);
+            }
+        }
+        
+        /**
+         * 执行更新
+         */
+        @SuppressWarnings("unused")
+        public int update(String statement, Object parameter) {
+            try {
+                return (Integer) sqlSession.getClass()
+                        .getMethod("update", String.class, Object.class)
+                        .invoke(sqlSession, statement, parameter);
+            } catch (Exception e) {
+                throw new RuntimeException("执行更新失败", e);
+            }
+        }
+    }
+    
     @Override
     public Connection getConnection() throws Exception {
-        // 使用反射调用 getConnection() 方法
+        // 使用 SqlSessionTemplate 获取连接
         try {
-            return (Connection) sqlSessionTemplate.getClass()
-                    .getMethod("getConnection")
-                    .invoke(sqlSessionTemplate);
+            return sqlSessionTemplateWrapper.getConnection();
         } catch (Exception e) {
             // 降级使用 DataSource
+            log.warn("从 SqlSessionTemplate 获取连接失败，降级使用 DataSource", e);
             return dataSource.getConnection();
         }
     }

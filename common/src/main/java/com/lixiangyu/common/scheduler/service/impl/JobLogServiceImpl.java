@@ -1,7 +1,7 @@
 package com.lixiangyu.common.scheduler.service.impl;
 
-import com.lixiangyu.common.scheduler.entity.JobLog;
-import com.lixiangyu.common.scheduler.mapper.JobLogMapper;
+import com.lixiangyu.dal.entity.job.JobLog;
+import com.lixiangyu.dal.mapper.JobLogMapper;
 import com.lixiangyu.common.scheduler.service.JobLogService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
