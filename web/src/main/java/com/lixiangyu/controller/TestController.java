@@ -1,11 +1,6 @@
 package com.lixiangyu.controller;
 
-import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
-import com.alibaba.nacos.api.NacosFactory;
-import com.alibaba.nacos.api.config.ConfigService;
-import com.alibaba.nacos.api.exception.NacosException;
-import com.alibaba.nacos.shaded.com.google.gson.JsonObject;
 import com.lixiangyu.common.config.DynamicConfigManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,10 +23,6 @@ public class TestController {
     @Autowired
     private DynamicConfigManager dynamicConfigManager;
 
-    private static final String SERVER_ADDR = "127.0.0.1:8848";
-    private static final String DATA_ID = "demo-dev.json";
-    private static final String GROUP = "DEFAULT_GROUP";
-    private static final long timeout = 3000;
 
     @RequestMapping("/hello")
     public JSONObject hello() {

@@ -15,7 +15,8 @@ spring:
   # 注意：这里的格式必须与 file-extension 和 Nacos 中的实际 Data ID 格式一致
   # 如果不需要 Nacos 配置，可以注释掉下面这行，并在 cloud.nacos.config 中设置 import-check.enabled=false
   config:
-    import: nacos:${spring.application.name}-${spring.profiles.active}.json
+    import:
+      - nacos:${spring.application.name}-${spring.profiles.active}.json
   
   # ==================== Nacos 配置中心配置 ====================
   # Docker Compose 中 Nacos 配置：

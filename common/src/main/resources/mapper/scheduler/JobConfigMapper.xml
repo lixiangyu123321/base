@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lixiangyu.common.scheduler.mapper.JobConfigMapper">
+    
+    <resultMap id="BaseResultMap" type="com.lixiangyu.common.scheduler.entity.JobConfig">
+        <id column="id" property="id" jdbcType="BIGINT"/>
+        <result column="job_name" property="jobName" jdbcType="VARCHAR"/>
+        <result column="job_group" property="jobGroup" jdbcType="VARCHAR"/>
+        <result column="job_type" property="jobType" jdbcType="VARCHAR" typeHandler="org.apache.ibatis.type.EnumTypeHandler"/>
+        <result column="job_class" property="jobClass" jdbcType="VARCHAR"/>
+        <result column="cron_expression" property="cronExpression" jdbcType="VARCHAR"/>
+        <result column="job_params" property="jobParams" jdbcType="VARCHAR" typeHandler="com.lixiangyu.common.scheduler.typehandler.JsonTypeHandler"/>
+        <result column="description" property="description" jdbcType="VARCHAR"/>
+        <result column="status" property="status" jdbcType="VARCHAR" typeHandler="org.apache.ibatis.type.EnumTypeHandler"/>
+        <result column="environment" property="environment" jdbcType="VARCHAR"/>
+        <result column="retry_count" property="retryCount" jdbcType="INTEGER"/>
+        <result column="retry_interval" property="retryInterval" jdbcType="INTEGER"/>
+        <result column="timeout" property="timeout" jdbcType="INTEGER"/>
+        <result column="alert_enabled" property="alertEnabled" jdbcType="TINYINT"/>
+        <result column="alert_types" property="alertTypes" jdbcType="VARCHAR" typeHandler="com.lixiangyu.common.scheduler.typehandler.AlertTypeListTypeHandler"/>
+        <result column="alert_receivers" property="alertReceivers" jdbcType="VARCHAR" typeHandler="com.lixiangyu.common.scheduler.typehandler.AlertReceiversTypeHandler"/>
+        <result column="gray_release_enabled" property="grayReleaseEnabled" jdbcType="TINYINT"/>
+        <result column="gray_release_percent" property="grayReleasePercent" jdbcType="INTEGER"/>
+        <result column="version" property="version" jdbcType="INTEGER"/>
+        <result column="creator" property="creator" jdbcType="VARCHAR"/>
+        <result column="modifier" property="modifier" jdbcType="VARCHAR"/>
+        <result column="create_time" property="createTime" jdbcType="TIMESTAMP"/>
+        <result column="update_time" property="updateTime" jdbcType="TIMESTAMP"/>
+    </resultMap>
+    
+    <select id="selectByJobNameAndGroup" resultMap="BaseResultMap">
+        SELECT * FROM scheduler_job_config
+        WHERE job_name = #{jobName}
+          AND job_group = #{jobGroup}
+          AND environment = #{environment}
+    </select>
+    
+    <select id="selectByStatus" resultMap="BaseResultMap">
+        SELECT * FROM scheduler_job_config
+        WHERE status = #{status}
+        <if test="environment != null and environment != ''">
+            AND environment = #{environment}
+        </if>
+        ORDER BY create_time DESC
+    </select>
+    
+    <select id="selectAllWithEnvironment" resultMap="BaseResultMap">
+        SELECT * FROM scheduler_job_config
+        <if test="environment != null and environment != ''">
+            WHERE environment = #{environment}
+        </if>
+        ORDER BY create_time DESC
+    </select>
+    
+</mapper>
+
