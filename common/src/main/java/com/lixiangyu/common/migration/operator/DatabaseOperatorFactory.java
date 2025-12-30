@@ -16,7 +16,10 @@ import javax.sql.DataSource;
 @Slf4j
 @Component
 public class DatabaseOperatorFactory {
-    
+
+    /**
+     * 非必须的依赖
+     */
     @Autowired(required = false)
     private ApplicationContext applicationContext;
     

@@ -22,7 +22,11 @@ public class JdbcTemplateDatabaseOperator implements DatabaseOperator {
     
     private final JdbcTemplate jdbcTemplate;
     private final DataSource dataSource;
-    
+
+    /**
+     * 依旧构造方法注入
+     * @param dataSource 数据源
+     */
     public JdbcTemplateDatabaseOperator(DataSource dataSource) {
         this.dataSource = dataSource;
         this.jdbcTemplate = new JdbcTemplate(dataSource);
@@ -32,7 +36,14 @@ public class JdbcTemplateDatabaseOperator implements DatabaseOperator {
     public Connection getConnection() throws Exception {
         return dataSource.getConnection();
     }
-    
+
+    /**
+     * 这里还是jdbc对应的接口进行操作
+     * @param sql SQL 语句
+     * @param params 参数
+     * @return
+     * @throws Exception
+     */
     @Override
     public ResultSet executeQuery(String sql, Object... params) throws Exception {
         // JdbcTemplate 不直接返回 ResultSet，需要特殊处理
@@ -92,6 +103,7 @@ public class JdbcTemplateDatabaseOperator implements DatabaseOperator {
     
     /**
      * 从元数据获取表结构
+     * 依旧jdbc原生接口查询
      */
     private TableStructure getTableStructureFromMetaData(Connection conn, String tableName) 
             throws Exception {

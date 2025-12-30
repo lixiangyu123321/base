@@ -55,7 +55,7 @@ public interface DatabaseOperator {
     long getRecordCount(String tableName) throws Exception;
     
     /**
-     * 获取表结构
+     * 获取表结构(自定义)
      *
      * @param tableName 表名
      * @return 表结构信息（列名、类型等）

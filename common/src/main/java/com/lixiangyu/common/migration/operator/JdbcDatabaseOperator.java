@@ -10,7 +10,7 @@ import java.util.List;
 /**
  * JDBC 原生接口实现
  * 使用 JDBC 原生 API 操作数据库
- * 
+ * 基于原生的Statement发送SQL语句，ResultSet返回结果
  * 注意：此类由 DatabaseOperatorFactory 创建，不应被 Spring 自动管理
  * 
  * @author lixiangyu
@@ -20,7 +20,11 @@ public class JdbcDatabaseOperator implements DatabaseOperator {
     
     private final DataSource dataSource;
     private Connection connection;
-    
+
+    /**
+     * 注入数据源
+     * @param dataSource spring注入数据源
+     */
     public JdbcDatabaseOperator(DataSource dataSource) {
         this.dataSource = dataSource;
     }
@@ -32,7 +36,14 @@ public class JdbcDatabaseOperator implements DatabaseOperator {
         }
         return connection;
     }
-    
+
+    /**
+     * 预编译sql执行
+     * @param sql SQL 语句
+     * @param params 参数
+     * @return 查询结果
+     * @throws Exception 统一异常
+     */
     @Override
     public ResultSet executeQuery(String sql, Object... params) throws Exception {
         Connection conn = getConnection();
@@ -66,14 +77,20 @@ public class JdbcDatabaseOperator implements DatabaseOperator {
     public long getRecordCount(String tableName) throws Exception {
         try (Connection conn = getConnection();
              Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM " + tableName)) {
+             ResultSet rs = stmt.executeQuery("SELECT COUNT(1) FROM " + tableName)) {
             if (rs.next()) {
                 return rs.getLong(1);
             }
         }
         return 0;
     }
-    
+
+    /**
+     * 基于Connect结构的 DatabaseMetaData 获得源数据
+     * @param tableName 表名
+     * @return 返回自定义表结构
+     * @throws Exception 统一抛出异常
+     */
     @Override
     public TableStructure getTableStructure(String tableName) throws Exception {
         TableStructure structure = new TableStructure();

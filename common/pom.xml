@@ -159,6 +159,41 @@
             <artifactId>mapper-spring-boot-starter</artifactId>
             <version>${tk-mybatis.version}</version>
         </dependency>
+        
+        <!-- Apache HttpClient（用于 HTTP 请求） -->
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>4.5.14</version>
+        </dependency>
+        
+        <!-- Apache HttpClient Fluent API（简化 HTTP 请求） -->
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>fluent-hc</artifactId>
+            <version>4.5.14</version>
+        </dependency>
+        
+        <!-- Apache HttpMime（用于文件上传） -->
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpmime</artifactId>
+            <version>4.5.14</version>
+        </dependency>
+        
+        <!-- WebSocket API（Java 标准库） -->
+        <dependency>
+            <groupId>javax.websocket</groupId>
+            <artifactId>javax.websocket-api</artifactId>
+            <version>1.1</version>
+        </dependency>
+        
+        <!-- Tyrus WebSocket 实现（WebSocket 客户端需要实现） -->
+        <dependency>
+            <groupId>org.glassfish.tyrus</groupId>
+            <artifactId>tyrus-client</artifactId>
+            <version>1.17</version>
+        </dependency>
     </dependencies>
 
 </project>
