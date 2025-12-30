@@ -169,6 +169,25 @@
                 <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
                 <version>${nacos.version}</version>
             </dependency>
+
+            <!--Apache HttpClient：功能全面、稳定可靠，支持连接池、复杂认证、异步请求，适合企业级应用。-->
+            <dependency>
+                <groupId>org.apache.httpcomponents</groupId>
+                <artifactId>httpclient</artifactId>
+                <version>4.5.14</version>
+            </dependency>
+
+            <!--由 Square 开发，轻量高效、API 简洁，支持 HTTP/2、连接池、缓存，广泛用于 Android 和后端开发。-->
+            <dependency>
+                <groupId>org.apache.httpcomponents</groupId>
+                <artifactId>httpclient</artifactId>
+                <version>4.5.14</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-websocket</artifactId>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
