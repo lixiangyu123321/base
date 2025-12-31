@@ -13,7 +13,9 @@ import java.util.Map;
 /**
  * 数据校验器
  * 用于验证源端和目标端数据的一致性
- * 
+ *
+ * 12-31 17:59 数据校验只是逐条记录比较源库和目标库，且全量查询和同步操作，希望分批次以及多线程
+ *              或者希望获得更好的校验方法
  * @author lixiangyu
  */
 @Slf4j
@@ -108,7 +110,8 @@ public class DataValidator {
             
             String sourceSql = "SELECT " + selectColumns + " FROM " + tableName;
             String targetSql = "SELECT " + selectColumns + " FROM " + tableName + " WHERE " + whereClause;
-            
+
+            // TODO 这里一次查源数据库的记录有点太多了吧，分批次分线程
             try (PreparedStatement sourceStmt = sourceConn.prepareStatement(sourceSql);
                  ResultSet sourceRs = sourceStmt.executeQuery()) {
                 

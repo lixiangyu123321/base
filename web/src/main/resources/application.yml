@@ -147,6 +147,39 @@ spring:
           max-attempts: 3
           multiplier: 1.0
 
+# ==================== ShardingSphere-JDBC 分库分表配置 ====================
+# 注意：如果启用 ShardingSphere，需要关闭 Spring Boot 的自动数据源配置
+sharding:
+  # 是否启用 ShardingSphere（默认 false）
+  enabled: ${SHARDING_ENABLED:false}
+  # 是否显示 SQL（调试用）
+  sql-show: ${SHARDING_SQL_SHOW:true}
+  # 模式配置（Standalone/Cluster）
+  mode:
+    type: Standalone
+    repository:
+      type: JDBC
+      props:
+        jdbc-url: jdbc:mysql://localhost:3307/test_db?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+        jdbc-driver: com.mysql.cj.jdbc.Driver
+        username: root
+        password: 123456
+
+# ==================== MyCat 配置 ====================
+# MyCat 是一个数据库中间件，通常作为独立服务运行
+# Java 应用通过 JDBC 连接 MyCat，MyCat 负责路由到后端数据库
+mycat:
+  # 是否启用 MyCat（默认 false）
+  enabled: ${MYCAT_ENABLED:false}
+  # MyCat 服务器地址
+  server-addr: ${MYCAT_SERVER_ADDR:localhost:8066}
+  # MyCat 用户名
+  username: ${MYCAT_USERNAME:root}
+  # MyCat 密码
+  password: ${MYCAT_PASSWORD:123456}
+  # 数据库名
+  database: ${MYCAT_DATABASE:test_db}
+
 # ==================== MyBatis 配置 ====================
 mybatis:
   # 引用 common 模块的全局配置

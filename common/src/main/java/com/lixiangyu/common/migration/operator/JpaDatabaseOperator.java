@@ -18,7 +18,7 @@ import java.util.List;
  * 1. 支持 JPA 实体类操作
  * 2. 支持原生 SQL 查询
  * 3. 自动事务管理
- * 
+ * JPA的操作过于繁琐，这里可以考虑不予实现
  * @author lixiangyu
  */
 @Slf4j
@@ -80,6 +80,13 @@ public class JpaDatabaseOperator implements DatabaseOperator {
          */
         public QueryWrapper createNativeQuery(String sql) {
             try {
+                // ========== 反射调用：JPA EntityManager.createNativeQuery() ==========
+                // 类名：javax.persistence.EntityManager
+                // 方法原型：Query createNativeQuery(String sqlString)
+                // 作用：创建原生 SQL 查询对象，用于执行数据库特定的 SQL 语句
+                // 参数：sql - 原生 SQL 语句（如 "SELECT * FROM table WHERE id = ?"）
+                // 返回：Query 对象，用于设置参数和执行查询
+                // 位置：JpaDatabaseOperator.java:83-85
                 Object query = entityManager.getClass()
                         .getMethod("createNativeQuery", String.class)
                         .invoke(entityManager, sql);
@@ -94,6 +101,13 @@ public class JpaDatabaseOperator implements DatabaseOperator {
          */
         public void persist(Object entity) {
             try {
+                // ========== 反射调用：JPA EntityManager.persist() ==========
+                // 类名：javax.persistence.EntityManager
+                // 方法原型：void persist(Object entity)
+                // 作用：将实体对象持久化到数据库（相当于 INSERT 操作）
+                // 参数：entity - 要持久化的实体对象（必须标注 @Entity）
+                // 说明：实体对象会被添加到持久化上下文中，在事务提交时写入数据库
+                // 位置：JpaDatabaseOperator.java:97-99
                 entityManager.getClass()
                         .getMethod("persist", Object.class)
                         .invoke(entityManager, entity);
@@ -108,6 +122,14 @@ public class JpaDatabaseOperator implements DatabaseOperator {
         @SuppressWarnings("unchecked")
         public <T> T merge(T entity) {
             try {
+                // ========== 反射调用：JPA EntityManager.merge() ==========
+                // 类名：javax.persistence.EntityManager
+                // 方法原型：<T> T merge(T entity)
+                // 作用：合并实体对象到数据库（相当于 UPDATE 操作）
+                // 参数：entity - 要合并的实体对象
+                // 返回：合并后的实体对象（可能是新的托管实例）
+                // 说明：如果实体已存在（根据主键），则更新；如果不存在，则插入
+                // 位置：JpaDatabaseOperator.java:111-113
                 return (T) entityManager.getClass()
                         .getMethod("merge", Object.class)
                         .invoke(entityManager, entity);
@@ -121,6 +143,13 @@ public class JpaDatabaseOperator implements DatabaseOperator {
          */
         public void remove(Object entity) {
             try {
+                // ========== 反射调用：JPA EntityManager.remove() ==========
+                // 类名：javax.persistence.EntityManager
+                // 方法原型：void remove(Object entity)
+                // 作用：从数据库中删除实体对象（相当于 DELETE 操作）
+                // 参数：entity - 要删除的实体对象（必须是托管实体）
+                // 说明：实体对象必须处于托管状态，在事务提交时从数据库删除
+                // 位置：JpaDatabaseOperator.java:124-126
                 entityManager.getClass()
                         .getMethod("remove", Object.class)
                         .invoke(entityManager, entity);
@@ -135,6 +164,13 @@ public class JpaDatabaseOperator implements DatabaseOperator {
         @SuppressWarnings("unchecked")
         public <T> T find(Class<T> entityClass, Object id) {
             try {
+                // ========== 反射调用：JPA EntityManager.find() ==========
+                // 类名：javax.persistence.EntityManager
+                // 方法原型：<T> T find(Class<T> entityClass, Object primaryKey)
+                // 作用：根据主键查找实体对象（相当于 SELECT WHERE id = ?）
+                // 参数：entityClass - 实体类，id - 主键值
+                // 返回：找到的实体对象，如果不存在则返回 null
+                // 位置：JpaDatabaseOperator.java:138-140
                 return (T) entityManager.getClass()
                         .getMethod("find", Class.class, Object.class)
                         .invoke(entityManager, entityClass, id);
@@ -148,6 +184,14 @@ public class JpaDatabaseOperator implements DatabaseOperator {
          */
         public Connection unwrap(Class<Connection> clazz) {
             try {
+                // ========== 反射调用：JPA EntityManager.unwrap() ==========
+                // 类名：javax.persistence.EntityManager
+                // 方法原型：<T> T unwrap(Class<T> clazz)
+                // 作用：获取 EntityManager 的底层实现对象（如 JDBC Connection）
+                // 参数：clazz - 要获取的底层对象类型（如 Connection.class）
+                // 返回：底层对象实例
+                // 说明：用于获取 JPA 实现提供的底层资源（如 JDBC Connection、Hibernate Session 等）
+                // 位置：JpaDatabaseOperator.java:151-153
                 return (Connection) entityManager.getClass()
                         .getMethod("unwrap", Class.class)
                         .invoke(entityManager, clazz);
@@ -175,6 +219,13 @@ public class JpaDatabaseOperator implements DatabaseOperator {
         @SuppressWarnings("unused")
         public EntityManagerWrapper createEntityManager() {
             try {
+                // ========== 反射调用：JPA EntityManagerFactory.createEntityManager() ==========
+                // 类名：javax.persistence.EntityManagerFactory
+                // 方法原型：EntityManager createEntityManager()
+                // 作用：创建新的 EntityManager 实例
+                // 返回：新创建的 EntityManager 实例
+                // 说明：EntityManagerFactory 是 EntityManager 的工厂类，用于创建 EntityManager
+                // 位置：JpaDatabaseOperator.java:178-180
                 Object em = entityManagerFactory.getClass()
                         .getMethod("createEntityManager")
                         .invoke(entityManagerFactory);
@@ -200,6 +251,14 @@ public class JpaDatabaseOperator implements DatabaseOperator {
          */
         public QueryWrapper setParameter(int position, Object value) {
             try {
+                // ========== 反射调用：JPA Query.setParameter() ==========
+                // 类名：javax.persistence.Query
+                // 方法原型：Query setParameter(int position, Object value)
+                // 作用：为 SQL 查询设置参数（按位置，从 1 开始）
+                // 参数：position - 参数位置（从 1 开始），value - 参数值
+                // 返回：Query 对象（支持链式调用）
+                // 说明：用于设置 SQL 中的占位符参数（如 "SELECT * FROM table WHERE id = ?"）
+                // 位置：JpaDatabaseOperator.java:203-205
                 query.getClass()
                         .getMethod("setParameter", int.class, Object.class)
                         .invoke(query, position, value);
@@ -214,6 +273,13 @@ public class JpaDatabaseOperator implements DatabaseOperator {
          */
         public int executeUpdate() {
             try {
+                // ========== 反射调用：JPA Query.executeUpdate() ==========
+                // 类名：javax.persistence.Query
+                // 方法原型：int executeUpdate()
+                // 作用：执行更新或删除 SQL 语句（UPDATE/DELETE）
+                // 返回：受影响的行数
+                // 说明：用于执行修改数据的 SQL 语句，不返回结果集
+                // 位置：JpaDatabaseOperator.java:217-219
                 return (Integer) query.getClass()
                         .getMethod("executeUpdate")
                         .invoke(query);
@@ -227,6 +293,13 @@ public class JpaDatabaseOperator implements DatabaseOperator {
          */
         public Object getSingleResult() {
             try {
+                // ========== 反射调用：JPA Query.getSingleResult() ==========
+                // 类名：javax.persistence.Query
+                // 方法原型：Object getSingleResult()
+                // 作用：执行查询并返回单个结果对象
+                // 返回：查询结果对象（如果查询返回多行会抛出异常）
+                // 说明：用于执行返回单行结果的查询（如 COUNT、MAX、MIN 等聚合函数）
+                // 位置：JpaDatabaseOperator.java:230-232
                 return query.getClass()
                         .getMethod("getSingleResult")
                         .invoke(query);

@@ -15,7 +15,9 @@ import javax.sql.DataSource;
 /**
  * 热迁移切面
  * 支持通过 @HotMigration 注解自动执行数据迁移
- * 
+ *
+ * TODO 未支持热迁移注解
+ * TODO 将来改写
  * @author lixiangyu
  */
 @Slf4j

@@ -13,7 +13,7 @@ import java.util.List;
  * 使用 MyBatis SqlSession 操作数据库
  * 
  * 注意：需要项目中有 MyBatis 配置
- * 
+ * TODO 使用MyBatis对应的接口进行操作
  * @author lixiangyu
  */
 @Slf4j
@@ -80,6 +80,13 @@ public class MyBatisDatabaseOperator implements DatabaseOperator {
          */
         public Connection getConnection() {
             try {
+                // ========== 反射调用：MyBatis SqlSessionTemplate.getConnection() ==========
+                // 类名：org.mybatis.spring.SqlSessionTemplate
+                // 方法原型：Connection getConnection()
+                // 作用：从 SqlSessionTemplate 获取底层 JDBC Connection
+                // 返回：JDBC Connection 对象
+                // 说明：SqlSessionTemplate 是 MyBatis 与 Spring 集成的会话模板，封装了 SqlSession
+                // 位置：MyBatisDatabaseOperator.java:83-85
                 return (Connection) sqlSessionTemplate.getClass()
                         .getMethod("getConnection")
                         .invoke(sqlSessionTemplate);
@@ -94,6 +101,13 @@ public class MyBatisDatabaseOperator implements DatabaseOperator {
         @SuppressWarnings("unused")
         public SqlSessionWrapper getSqlSession() {
             try {
+                // ========== 反射调用：MyBatis SqlSessionTemplate.getSqlSession() ==========
+                // 类名：org.mybatis.spring.SqlSessionTemplate
+                // 方法原型：SqlSession getSqlSession()
+                // 作用：获取 SqlSessionTemplate 内部的 SqlSession 实例
+                // 返回：SqlSession 对象（MyBatis 的核心会话对象）
+                // 说明：SqlSession 是 MyBatis 的核心接口，用于执行 SQL 操作
+                // 位置：MyBatisDatabaseOperator.java:97-99
                 Object sqlSession = sqlSessionTemplate.getClass()
                         .getMethod("getSqlSession")
                         .invoke(sqlSessionTemplate);
@@ -121,6 +135,13 @@ public class MyBatisDatabaseOperator implements DatabaseOperator {
         @SuppressWarnings("unused")
         public SqlSessionWrapper openSession() {
             try {
+                // ========== 反射调用：MyBatis SqlSessionFactory.openSession() ==========
+                // 类名：org.apache.ibatis.session.SqlSessionFactory
+                // 方法原型：SqlSession openSession()
+                // 作用：创建新的 SqlSession 实例
+                // 返回：新创建的 SqlSession 实例
+                // 说明：SqlSessionFactory 是 SqlSession 的工厂类，用于创建 SqlSession
+                // 位置：MyBatisDatabaseOperator.java:124-126
                 Object sqlSession = sqlSessionFactory.getClass()
                         .getMethod("openSession")
                         .invoke(sqlSessionFactory);
@@ -147,6 +168,14 @@ public class MyBatisDatabaseOperator implements DatabaseOperator {
         @SuppressWarnings("unused")
         public <T> List<T> selectList(String statement, Object parameter) {
             try {
+                // ========== 反射调用：MyBatis SqlSession.selectList() ==========
+                // 类名：org.apache.ibatis.session.SqlSession
+                // 方法原型：<E> List<E> selectList(String statement, Object parameter)
+                // 作用：执行查询语句并返回结果列表
+                // 参数：statement - Mapper 方法全限定名或 SQL 语句 ID，parameter - 查询参数
+                // 返回：查询结果列表
+                // 说明：用于执行返回多行结果的查询（如 SELECT * FROM table）
+                // 位置：MyBatisDatabaseOperator.java:151-153
                 @SuppressWarnings("unchecked")
                 List<T> result = (List<T>) sqlSession.getClass()
                         .getMethod("selectList", String.class, Object.class)
@@ -163,6 +192,14 @@ public class MyBatisDatabaseOperator implements DatabaseOperator {
         @SuppressWarnings("unused")
         public int update(String statement, Object parameter) {
             try {
+                // ========== 反射调用：MyBatis SqlSession.update() ==========
+                // 类名：org.apache.ibatis.session.SqlSession
+                // 方法原型：int update(String statement, Object parameter)
+                // 作用：执行更新、插入或删除语句
+                // 参数：statement - Mapper 方法全限定名或 SQL 语句 ID，parameter - 更新参数
+                // 返回：受影响的行数
+                // 说明：用于执行 INSERT、UPDATE、DELETE 等修改数据的 SQL 语句
+                // 位置：MyBatisDatabaseOperator.java:166-168
                 return (Integer) sqlSession.getClass()
                         .getMethod("update", String.class, Object.class)
                         .invoke(sqlSession, statement, parameter);

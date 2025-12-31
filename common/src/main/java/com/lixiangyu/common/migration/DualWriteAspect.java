@@ -28,7 +28,11 @@ import java.util.concurrent.Executors;
  * 3. 支持同步和异步写入
  * 4. 支持失败回滚
  * 5. 支持重试机制
- * 
+ *
+ * TODO 改写双写
+ * TODO 动态切换数据源，支持多数据源
+ * 12-31 19:00 这里的双写其实蛮鸡肋的，其实我希望的是扩展MyBatis的相关的接口，再MyBatis的基础上实现双写
+ *             看看MyBatis的扩展可不可以实现双写，或者这里的双写改为动态切换数据源，或者支持多数据源
  * @author lixiangyu
  */
 @Slf4j

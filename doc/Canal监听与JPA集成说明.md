@@ -234,7 +234,7 @@ public class UserService {
 MigrationConfig config = MigrationConfig.builder()
         .source(MigrationConfig.DataSourceConfig.builder()
                 .dataSource(sourceDataSource)
-                .operatorType(MigrationConfig.DataSourceConfig.OperatorType.JPA)  // 使用 JPA
+                .operatorType(MigrationConfig.DataSourceConfig.OperatorType.JPA)  // 使用 JPA规范.md
                 .build())
         .target(MigrationConfig.DataSourceConfig.builder()
                 .dataSource(targetDataSource)
@@ -258,9 +258,9 @@ public class UserService {
         tables = {"user"}
     )
     public void saveUser(UserDO user) {
-        // 使用 JPA 保存
+        // 使用 JPA规范.md 保存
         entityManager.persist(user);
-        // 双写切面会自动识别 JPA 操作并同步到目标库
+        // 双写切面会自动识别 JPA规范.md 操作并同步到目标库
     }
 }
 ```
@@ -335,7 +335,7 @@ public class DatabaseMigrationService {
     }
     
     /**
-     * 使用双写进行平滑切换（JPA）
+     * 使用双写进行平滑切换（JPA规范.md）
      */
     @DualWrite(
         source = "sourceDataSource",
@@ -343,7 +343,7 @@ public class DatabaseMigrationService {
         tables = {"user", "order"}
     )
     public void saveUser(UserDO user) {
-        // 使用 JPA 保存，自动双写
+        // 使用 JPA规范.md 保存，自动双写
         entityManager.persist(user);
     }
 }

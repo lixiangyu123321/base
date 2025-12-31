@@ -20,7 +20,12 @@ import java.util.concurrent.ConcurrentHashMap;
  * 2. 支持 INSERT/UPDATE/DELETE 操作
  * 3. 自动同步到目标数据库
  * 4. 支持断点续传
- * 
+ *
+ * TODO 对于增删改查的语句比较粗糙
+ *
+ * 12-31 18:01 依旧基于jdbc原生接口进行同步操作
+ *              这里其实可以使用其他方法（MyBatis，Hibernate/JPA，JDBC-TEMPLATE，JDBC原生接口）进行数据库的迁移的
+ * TODO 上面这里至关重要
  * @author lixiangyu
  */
 @Slf4j
@@ -29,6 +34,7 @@ public class BinlogListener {
     
     /**
      * 监听任务映射（Task ID -> 监听任务）
+     * 支持监听多个数据同步任务
      */
     private final Map<String, BinlogListenerTask> listenerTasks = new ConcurrentHashMap<>();
     
@@ -163,7 +169,12 @@ public class BinlogListener {
             // 使用 MySQL BinaryLogClient 监听 binlog
             // 这里使用反射方式，避免直接依赖
             try {
-                // 检查 BinaryLogClient 类是否存在
+                // ========== 反射调用：检查 BinaryLogClient 类是否存在 ==========
+                // 类名：com.github.shyiko.mysql.binlog.BinaryLogClient
+                // 作用：MySQL binlog 客户端，用于连接 MySQL 服务器并监听 binlog 事件
+                // 方法：Class.forName(String className)
+                // 说明：动态加载类，如果类不存在会抛出 ClassNotFoundException
+                // 位置：BinlogListener.java:169
                 Class.forName("com.github.shyiko.mysql.binlog.BinaryLogClient");
                 Object client = createBinaryLogClient();
                 
@@ -174,6 +185,7 @@ public class BinlogListener {
                 connect(client);
                 
                 // 保持运行
+                // 一直保持连接，一直进行监听
                 while (!stopped && running) {
                     Thread.sleep(1000);
                 }
@@ -200,14 +212,36 @@ public class BinlogListener {
                 int port = extractPort(url);
                 String username = conn.getMetaData().getUserName();
                 
+                // ========== 反射调用：创建 BinaryLogClient 实例 ==========
+                // 类名：com.github.shyiko.mysql.binlog.BinaryLogClient
+                // 构造函数原型：BinaryLogClient(String hostname, int port)
+                // 作用：创建 binlog 客户端实例，连接到指定的 MySQL 服务器
+                // 参数：host - MySQL 服务器主机名，port - MySQL 服务器端口（通常是 3306）
+                // 位置：BinlogListener.java:206
                 Class<?> binaryLogClientClass = Class.forName("com.github.shyiko.mysql.binlog.BinaryLogClient");
                 Object client = binaryLogClientClass.getConstructor(String.class, int.class).newInstance(host, port);
+                
+                // ========== 反射调用：设置 BinaryLogClient 用户名 ==========
+                // 方法原型：void setUsername(String username)
+                // 作用：设置连接 MySQL 服务器的用户名
+                // 参数：username - MySQL 用户名
+                // 位置：BinlogListener.java:208
                 binaryLogClientClass.getMethod("setUsername", String.class).invoke(client, username);
 
-                // 用于端点续传
+                // ========== 反射调用：设置 binlog 文件名（用于断点续传） ==========
+                // 方法原型：void setBinlogFilename(String binlogFilename)
+                // 作用：设置要读取的 binlog 文件名，用于断点续传功能
+                // 参数：binlogFilename - binlog 文件名（如 "mysql-bin.000001"）
+                // 位置：BinlogListener.java:212
                 if (config.getBinlogFile() != null) {
                     binaryLogClientClass.getMethod("setBinlogFilename", String.class).invoke(client, config.getBinlogFile());
                 }
+                
+                // ========== 反射调用：设置 binlog 位置（用于断点续传） ==========
+                // 方法原型：void setBinlogPosition(long binlogPosition)
+                // 作用：设置要读取的 binlog 位置（字节偏移），用于断点续传功能
+                // 参数：binlogPosition - binlog 位置（字节偏移量）
+                // 位置：BinlogListener.java:215
                 if (config.getBinlogPosition() != null) {
                     binaryLogClientClass.getMethod("setBinlogPosition", long.class).invoke(client, config.getBinlogPosition());
                 }
@@ -221,19 +255,36 @@ public class BinlogListener {
          */
         private void setEventListener(Object client) throws Exception {
             Class<?> clientClass = client.getClass();
+            
+            // ========== 反射调用：加载 EventListener 接口 ==========
+            // 类名：com.github.shyiko.mysql.binlog.event.EventListener
+            // 作用：binlog 事件监听器接口，用于接收 binlog 事件
+            // 方法：void onEvent(Event event) - 当收到 binlog 事件时调用
+            // 位置：BinlogListener.java:227
             Class<?> eventListenerClass = Class.forName("com.github.shyiko.mysql.binlog.event.EventListener");
 
-            // 创建事件监听器
+            // ========== 反射调用：创建动态代理实现 EventListener 接口 ==========
+            // 方法：Proxy.newProxyInstance(ClassLoader loader, Class<?>[] interfaces, InvocationHandler h)
+            // 作用：动态创建 EventListener 接口的实现类，将事件转发给 handleBinlogEvent 方法
+            // 接口方法：void onEvent(Event event) - 当收到 binlog 事件时调用
+            // 说明：使用动态代理避免直接实现接口，实现编译期无依赖
+            // 位置：BinlogListener.java:230-239
             Object listener = java.lang.reflect.Proxy.newProxyInstance(
                     eventListenerClass.getClassLoader(),
                     new Class[]{eventListenerClass},
                     (proxy, method, args) -> {
                         if ("onEvent".equals(method.getName())) {
+                            // 第一个参数为 Event 对象，为事件对象
                             handleBinlogEvent(args[0]);
                         }
                         return null;
                     });
             
+            // ========== 反射调用：注册事件监听器到 BinaryLogClient ==========
+            // 方法原型：void registerEventListener(EventListener listener)
+            // 作用：将事件监听器注册到 BinaryLogClient，当收到 binlog 事件时会调用监听器的 onEvent 方法
+            // 参数：listener - 事件监听器实例
+            // 位置：BinlogListener.java:241
             clientClass.getMethod("registerEventListener", eventListenerClass).invoke(client, listener);
         }
         
@@ -264,8 +315,18 @@ public class BinlogListener {
          * 处理 INSERT 事件
          */
         private void handleInsertEvent(Object event) throws Exception {
-            // 获取表ID和行数据
+            // ========== 反射调用：获取 binlog 事件中的表ID ==========
+            // 方法原型：long getTableId()
+            // 作用：获取 binlog 事件对应的表ID（MySQL 内部表标识符）
+            // 返回：表ID（long 类型）
+            // 位置：BinlogListener.java:272
             long tableId = (Long) event.getClass().getMethod("getTableId").invoke(event);
+            
+            // ========== 反射调用：获取 binlog 事件中的行数据 ==========
+            // 方法原型：List<Row> getRows()
+            // 作用：获取 binlog 事件中包含的所有行数据（INSERT 事件包含插入的行）
+            // 返回：行数据列表（List<Row> 类型）
+            // 位置：BinlogListener.java:273
             Object rows = event.getClass().getMethod("getRows").invoke(event);
             
             // 获取表名
@@ -282,7 +343,17 @@ public class BinlogListener {
          * 处理 UPDATE 事件
          */
         private void handleUpdateEvent(Object event) throws Exception {
+            // ========== 反射调用：获取 binlog UPDATE 事件中的表ID ==========
+            // 方法原型：long getTableId()
+            // 作用：获取 UPDATE 事件对应的表ID
+            // 位置：BinlogListener.java:289
             long tableId = (Long) event.getClass().getMethod("getTableId").invoke(event);
+            
+            // ========== 反射调用：获取 binlog UPDATE 事件中的行数据 ==========
+            // 方法原型：List<Pair<Row, Row>> getRows()
+            // 作用：获取 UPDATE 事件中包含的行数据对（Pair<beforeRow, afterRow>）
+            // 说明：在 binlog_row_image = FULL 模式下，包含完整的 before 和 after rows
+            // 位置：BinlogListener.java:290
             Object rows = event.getClass().getMethod("getRows").invoke(event);
             
             String tableName = getTableName(tableId);
@@ -290,14 +361,29 @@ public class BinlogListener {
                 return;
             }
             
-            syncUpdateToTarget(tableName, rows);
+            // 检查 binlog_row_image 配置
+            String binlogRowImage = getBinlogRowImage();
+            if (!"FULL".equalsIgnoreCase(binlogRowImage)) {
+                log.warn("binlog_row_image 配置为 {}，UPDATE 事件的 before/after rows 解析可能不完整。建议设置为 FULL", binlogRowImage);
+            }
+            
+            syncUpdateToTarget(tableName, rows, binlogRowImage);
         }
         
         /**
          * 处理 DELETE 事件
          */
         private void handleDeleteEvent(Object event) throws Exception {
+            // ========== 反射调用：获取 binlog DELETE 事件中的表ID ==========
+            // 方法原型：long getTableId()
+            // 作用：获取 DELETE 事件对应的表ID
+            // 位置：BinlogListener.java:310
             long tableId = (Long) event.getClass().getMethod("getTableId").invoke(event);
+            
+            // ========== 反射调用：获取 binlog DELETE 事件中的行数据 ==========
+            // 方法原型：List<Row> getRows()
+            // 作用：获取 DELETE 事件中包含的所有行数据（被删除的行）
+            // 位置：BinlogListener.java:311
             Object rows = event.getClass().getMethod("getRows").invoke(event);
             
             String tableName = getTableName(tableId);
@@ -345,9 +431,13 @@ public class BinlogListener {
         
         /**
          * 同步 UPDATE 到目标数据库
+         * 
+         * @param tableName 表名
+         * @param rows UPDATE 事件的 rows（List<Pair<Row, Row>> 或 List<Row>）
+         * @param binlogRowImage binlog_row_image 配置值（FULL/MINIMAL/NOBLOB）
          */
-        private void syncUpdateToTarget(String tableName, Object rows) throws SQLException {
-            log.debug("同步 UPDATE 到目标表: {}", tableName);
+        private void syncUpdateToTarget(String tableName, Object rows, String binlogRowImage) throws SQLException {
+            log.debug("同步 UPDATE 到目标表: {}, binlog_row_image: {}", tableName, binlogRowImage);
             
             try (java.sql.Connection conn = config.getTargetDataSource().getConnection()) {
                 // 获取表结构
@@ -357,11 +447,21 @@ public class BinlogListener {
                     return;
                 }
                 
-                // 解析 rows（binlog UPDATE 事件包含 before 和 after 两行）
-                List<Map<String, Object>> beforeRows = parseRowsBefore(rows, structure);
-                List<Map<String, Object>> afterRows = parseRowsAfter(rows, structure);
+                // 只有在 FULL 模式下才能正确解析 before 和 after rows
+                if (!"FULL".equalsIgnoreCase(binlogRowImage)) {
+                    log.warn("binlog_row_image 为 {}，UPDATE 事件可能不包含完整的 before/after rows，同步可能不准确", binlogRowImage);
+                }
                 
-                // 构建 UPDATE SQL
+                // 解析 rows（binlog UPDATE 事件在 FULL 模式下包含 before 和 after 两行）
+                List<Map<String, Object>> beforeRows = parseRowsBefore(rows, structure, binlogRowImage);
+                List<Map<String, Object>> afterRows = parseRowsAfter(rows, structure, binlogRowImage);
+                
+                if (afterRows.isEmpty()) {
+                    log.warn("UPDATE 事件未解析到 after rows，跳过同步");
+                    return;
+                }
+                
+                // 构建 UPDATE SQL（基于主键更新非主键列）
                 String updateSql = buildUpdateSql(tableName, structure);
                 
                 // 批量更新
@@ -426,6 +526,7 @@ public class BinlogListener {
          * 解析 rows（INSERT/DELETE 事件）
          */
         private List<Map<String, Object>> parseRows(Object rows, DatabaseOperator.TableStructure structure) {
+            // List 表示每行记录 Map为表字段与具体值的映射
             List<Map<String, Object>> rowDataList = new java.util.ArrayList<>();
             
             try {
@@ -459,8 +560,13 @@ public class BinlogListener {
             Map<String, Object> rowData = new java.util.HashMap<>();
             
             try {
-                // 使用反射获取 row 的列值
-                // binlog 事件中的 row 通常有 getValue() 或类似方法
+                // ========== 反射调用：获取 binlog Row 对象中的列值 ==========
+                // 方法原型：Object getValue(int columnIndex)
+                // 作用：从 binlog Row 对象中获取指定索引位置的列值
+                // 参数：columnIndex - 列索引（从 0 开始）
+                // 返回：列值（Object 类型，可能是 String、Long、Date 等）
+                // 说明：binlog 事件中的 Row 对象包含行的所有列值
+                // 位置：BinlogListener.java:489-492
                 if (row.getClass().getMethod("getValue", int.class) != null) {
                     for (int i = 0; i < structure.getColumns().size(); i++) {
                         DatabaseOperator.TableColumn column = structure.getColumns().get(i);
@@ -480,24 +586,273 @@ public class BinlogListener {
         
         /**
          * 解析 UPDATE 事件的 before rows
+         * 
+         * 注意：只有在 binlog_row_image = FULL 时，UPDATE 事件才包含完整的 before 和 after rows
+         * 
+         * @param rows UPDATE 事件的 rows（List<Pair<Row, Row>> 类型）
+         * @param structure 表结构
+         * @param binlogRowImage binlog_row_image 配置值
+         * @return before rows 列表
          */
-        private List<Map<String, Object>> parseRowsBefore(Object rows, DatabaseOperator.TableStructure structure) {
-            // UPDATE 事件的 rows 通常是 List<Pair<Row, Row>>
-            // 这里简化处理，实际应该解析 Pair 的第一个元素
-            return parseRows(rows, structure);
+        private List<Map<String, Object>> parseRowsBefore(Object rows, 
+                                                          DatabaseOperator.TableStructure structure,
+                                                          String binlogRowImage) {
+            List<Map<String, Object>> beforeRows = new java.util.ArrayList<>();
+            
+            // 只有在 FULL 模式下才能正确解析 before rows
+            if (!"FULL".equalsIgnoreCase(binlogRowImage)) {
+                log.debug("binlog_row_image 为 {}，无法解析完整的 before rows", binlogRowImage);
+                return beforeRows;
+            }
+            
+            try {
+                // UPDATE 事件的 rows 是 List<Pair<Row, Row>> 类型
+                // Pair 的第一个元素是 before row，第二个元素是 after row
+                if (rows instanceof java.util.List) {
+                    java.util.List<?> rowList = (java.util.List<?>) rows;
+                    
+                    for (Object pair : rowList) {
+                        // 尝试获取 Pair 的第一个元素（before row）
+                        Object beforeRow = extractPairFirst(pair);
+                        if (beforeRow != null) {
+                            Map<String, Object> rowData = parseRow(beforeRow, structure);
+                            if (rowData != null) {
+                                beforeRows.add(rowData);
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.error("解析 UPDATE 事件的 before rows 失败", e);
+            }
+            
+            return beforeRows;
         }
         
         /**
          * 解析 UPDATE 事件的 after rows
+         * 
+         * 注意：只有在 binlog_row_image = FULL 时，UPDATE 事件才包含完整的 before 和 after rows
+         * 
+         * @param rows UPDATE 事件的 rows（List<Pair<Row, Row>> 类型）
+         * @param structure 表结构
+         * @param binlogRowImage binlog_row_image 配置值
+         * @return after rows 列表
          */
-        private List<Map<String, Object>> parseRowsAfter(Object rows, DatabaseOperator.TableStructure structure) {
-            // UPDATE 事件的 rows 通常是 List<Pair<Row, Row>>
-            // 这里简化处理，实际应该解析 Pair 的第二个元素
-            return parseRows(rows, structure);
+        private List<Map<String, Object>> parseRowsAfter(Object rows, 
+                                                         DatabaseOperator.TableStructure structure,
+                                                         String binlogRowImage) {
+            List<Map<String, Object>> afterRows = new java.util.ArrayList<>();
+            
+            // 只有在 FULL 模式下才能正确解析 after rows
+            if (!"FULL".equalsIgnoreCase(binlogRowImage)) {
+                log.debug("binlog_row_image 为 {}，无法解析完整的 after rows", binlogRowImage);
+                return afterRows;
+            }
+            
+            try {
+                // UPDATE 事件的 rows 是 List<Pair<Row, Row>> 类型
+                // Pair 的第一个元素是 before row，第二个元素是 after row
+                if (rows instanceof java.util.List) {
+                    java.util.List<?> rowList = (java.util.List<?>) rows;
+                    
+                    for (Object pair : rowList) {
+                        // 尝试获取 Pair 的第二个元素（after row）
+                        Object afterRow = extractPairSecond(pair);
+                        if (afterRow != null) {
+                            Map<String, Object> rowData = parseRow(afterRow, structure);
+                            if (rowData != null) {
+                                afterRows.add(rowData);
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.error("解析 UPDATE 事件的 after rows 失败", e);
+            }
+            
+            return afterRows;
+        }
+        
+        /**
+         * 从 Pair 对象中提取第一个元素（before row）
+         * 
+         * @param pair Pair 对象（可能是 com.github.shyiko.mysql.binlog.event.RowsEvent.Pair 或其他实现）
+         * @return before row 对象
+         */
+        private Object extractPairFirst(Object pair) {
+            try {
+                // ========== 反射调用：获取 Pair 对象的所有方法 ==========
+                // 方法：Class.getMethods()
+                // 作用：获取 Pair 对象的所有公共方法，用于查找获取第一个元素的方法
+                // 返回：Method[] - 方法数组
+                // 位置：BinlogListener.java:606
+                java.lang.reflect.Method[] methods = pair.getClass().getMethods();
+                
+                // ========== 反射调用：尝试通过 getKey() 方法获取 Pair 的第一个元素 ==========
+                // 方法原型：Object getKey() 或 K getKey()
+                // 作用：获取 Pair 对象的第一个元素（before row）
+                // 说明：某些 Pair 实现（如 Map.Entry）使用 getKey() 方法
+                // 位置：BinlogListener.java:609-613
+                for (java.lang.reflect.Method method : methods) {
+                    if ("getKey".equals(method.getName()) && method.getParameterCount() == 0) {
+                        return method.invoke(pair);
+                    }
+                }
+                
+                // ========== 反射调用：尝试通过 getFirst() 方法获取 Pair 的第一个元素 ==========
+                // 方法原型：Object getFirst() 或 K getFirst()
+                // 作用：获取 Pair 对象的第一个元素（before row）
+                // 说明：某些 Pair 实现（如 Apache Commons Pair）使用 getFirst() 方法
+                // 位置：BinlogListener.java:616-620
+                for (java.lang.reflect.Method method : methods) {
+                    if ("getFirst".equals(method.getName()) && method.getParameterCount() == 0) {
+                        return method.invoke(pair);
+                    }
+                }
+                
+                // ========== 反射调用：尝试通过 getLeft() 方法获取 Pair 的第一个元素 ==========
+                // 方法原型：Object getLeft() 或 K getLeft()
+                // 作用：获取 Pair 对象的第一个元素（before row）
+                // 说明：某些 Pair 实现使用 getLeft() 方法
+                // 位置：BinlogListener.java:623-627
+                for (java.lang.reflect.Method method : methods) {
+                    if ("getLeft".equals(method.getName()) && method.getParameterCount() == 0) {
+                        return method.invoke(pair);
+                    }
+                }
+                
+                // ========== 反射调用：尝试通过字段访问获取 Pair 的第一个元素 ==========
+                // 字段名：key 或 first
+                // 作用：如果 Pair 使用字段存储第一个元素，直接访问字段
+                // 方法：getDeclaredField(String name) - 获取字段，setAccessible(true) - 设置可访问
+                // 位置：BinlogListener.java:631-644
+                try {
+                    java.lang.reflect.Field field = pair.getClass().getDeclaredField("key");
+                    field.setAccessible(true);
+                    return field.get(pair);
+                } catch (NoSuchFieldException e) {
+                    // 忽略
+                }
+                
+                try {
+                    java.lang.reflect.Field field = pair.getClass().getDeclaredField("first");
+                    field.setAccessible(true);
+                    return field.get(pair);
+                } catch (NoSuchFieldException e) {
+                    // 忽略
+                }
+                
+                log.warn("无法从 Pair 对象中提取第一个元素，Pair 类型: {}", pair.getClass().getName());
+            } catch (Exception e) {
+                log.error("提取 Pair 第一个元素失败", e);
+            }
+            
+            return null;
+        }
+        
+        /**
+         * 从 Pair 对象中提取第二个元素（after row）
+         * 
+         * @param pair Pair 对象（可能是 com.github.shyiko.mysql.binlog.event.RowsEvent.Pair 或其他实现）
+         * @return after row 对象
+         */
+        private Object extractPairSecond(Object pair) {
+            try {
+                // ========== 反射调用：获取 Pair 对象的所有方法 ==========
+                // 方法：Class.getMethods()
+                // 作用：获取 Pair 对象的所有公共方法，用于查找获取第二个元素的方法
+                // 位置：BinlogListener.java:664
+                java.lang.reflect.Method[] methods = pair.getClass().getMethods();
+                
+                // ========== 反射调用：尝试通过 getValue() 方法获取 Pair 的第二个元素 ==========
+                // 方法原型：Object getValue() 或 V getValue()
+                // 作用：获取 Pair 对象的第二个元素（after row）
+                // 说明：某些 Pair 实现（如 Map.Entry）使用 getValue() 方法
+                // 位置：BinlogListener.java:667-671
+                for (java.lang.reflect.Method method : methods) {
+                    if ("getValue".equals(method.getName()) && method.getParameterCount() == 0) {
+                        return method.invoke(pair);
+                    }
+                }
+                
+                // ========== 反射调用：尝试通过 getSecond() 方法获取 Pair 的第二个元素 ==========
+                // 方法原型：Object getSecond() 或 V getSecond()
+                // 作用：获取 Pair 对象的第二个元素（after row）
+                // 说明：某些 Pair 实现（如 Apache Commons Pair）使用 getSecond() 方法
+                // 位置：BinlogListener.java:674-678
+                for (java.lang.reflect.Method method : methods) {
+                    if ("getSecond".equals(method.getName()) && method.getParameterCount() == 0) {
+                        return method.invoke(pair);
+                    }
+                }
+                
+                // ========== 反射调用：尝试通过 getRight() 方法获取 Pair 的第二个元素 ==========
+                // 方法原型：Object getRight() 或 V getRight()
+                // 作用：获取 Pair 对象的第二个元素（after row）
+                // 说明：某些 Pair 实现使用 getRight() 方法
+                // 位置：BinlogListener.java:681-685
+                for (java.lang.reflect.Method method : methods) {
+                    if ("getRight".equals(method.getName()) && method.getParameterCount() == 0) {
+                        return method.invoke(pair);
+                    }
+                }
+                
+                // ========== 反射调用：尝试通过字段访问获取 Pair 的第二个元素 ==========
+                // 字段名：value 或 second
+                // 作用：如果 Pair 使用字段存储第二个元素，直接访问字段
+                // 方法：getDeclaredField(String name) - 获取字段，setAccessible(true) - 设置可访问
+                // 位置：BinlogListener.java:689-702
+                try {
+                    java.lang.reflect.Field field = pair.getClass().getDeclaredField("value");
+                    field.setAccessible(true);
+                    return field.get(pair);
+                } catch (NoSuchFieldException e) {
+                    // 忽略
+                }
+                
+                try {
+                    java.lang.reflect.Field field = pair.getClass().getDeclaredField("second");
+                    field.setAccessible(true);
+                    return field.get(pair);
+                } catch (NoSuchFieldException e) {
+                    // 忽略
+                }
+                
+                log.warn("无法从 Pair 对象中提取第二个元素，Pair 类型: {}", pair.getClass().getName());
+            } catch (Exception e) {
+                log.error("提取 Pair 第二个元素失败", e);
+            }
+            
+            return null;
+        }
+        
+        /**
+         * 获取 MySQL binlog_row_image 配置值
+         * 
+         * @return binlog_row_image 配置值（FULL/MINIMAL/NOBLOB），如果无法获取则返回 "UNKNOWN"
+         */
+        private String getBinlogRowImage() {
+            try (java.sql.Connection conn = config.getSourceDataSource().getConnection()) {
+                try (java.sql.Statement stmt = conn.createStatement();
+                     java.sql.ResultSet rs = stmt.executeQuery("SHOW VARIABLES LIKE 'binlog_row_image'")) {
+                    
+                    if (rs.next()) {
+                        String value = rs.getString("Value");
+                        log.debug("binlog_row_image 配置值: {}", value);
+                        return value != null ? value : "UNKNOWN";
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("无法获取 binlog_row_image 配置，将使用默认处理方式", e);
+            }
+            
+            return "UNKNOWN";
         }
         
         /**
          * 构建 INSERT SQL
+         * 这里是预编译SQL
          */
         private String buildInsertSql(String tableName, DatabaseOperator.TableStructure structure) {
             StringBuilder sql = new StringBuilder("INSERT INTO ");
@@ -518,6 +873,7 @@ public class BinlogListener {
         
         /**
          * 构建 UPDATE SQL
+         * 基于主键进行更新
          */
         private String buildUpdateSql(String tableName, DatabaseOperator.TableStructure structure) {
             StringBuilder sql = new StringBuilder("UPDATE ");
@@ -539,6 +895,7 @@ public class BinlogListener {
         
         /**
          * 构建 DELETE SQL
+         * 基于主键进行删除操作
          */
         private String buildDeleteSql(String tableName, DatabaseOperator.TableStructure structure) {
             StringBuilder sql = new StringBuilder("DELETE FROM ");
@@ -814,7 +1171,15 @@ public class BinlogListener {
         /**
          * 连接 BinaryLogClient
          */
+        /**
+         * 连接 BinaryLogClient
+         */
         private void connect(Object client) throws Exception {
+            // ========== 反射调用：连接 BinaryLogClient 到 MySQL 服务器 ==========
+            // 方法原型：void connect()
+            // 作用：建立与 MySQL 服务器的连接，开始监听 binlog 事件
+            // 说明：连接成功后，BinaryLogClient 会自动接收 binlog 事件并调用注册的监听器
+            // 位置：BinlogListener.java:1057
             client.getClass().getMethod("connect").invoke(client);
         }
         
@@ -822,6 +1187,10 @@ public class BinlogListener {
          * 断开 BinaryLogClient
          */
         private void disconnect(Object client) throws Exception {
+            // ========== 反射调用：断开 BinaryLogClient 连接 ==========
+            // 方法原型：void disconnect()
+            // 作用：断开与 MySQL 服务器的连接，停止监听 binlog 事件
+            // 位置：BinlogListener.java:1064
             client.getClass().getMethod("disconnect").invoke(client);
         }
         

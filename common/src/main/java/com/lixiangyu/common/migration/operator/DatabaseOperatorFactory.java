@@ -10,7 +10,7 @@ import javax.sql.DataSource;
 /**
  * 数据库操作器工厂
  * 根据配置创建不同的数据库操作器
- * 
+ * *** 这里比较重要的是基于反射方式创建对应的类，而非SpringBean来获得 *** -> 反射解耦
  * @author lixiangyu
  */
 @Slf4j

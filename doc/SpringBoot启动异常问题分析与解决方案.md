@@ -511,7 +511,7 @@ import javax.persistence.Table;
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-@Table(name = "t_aigc_evaluating")  // 使用 JPA 的 @Table 注解
+@Table(name = "t_aigc_evaluating")  // 使用 JPA规范.md 的 @Table 注解
 public class EvaluatingDO extends BaseDO {
     // ...
 }

@@ -20,7 +20,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * 2. 支持按表动态开启/关闭双写
  * 3. 支持写源库/写目标库的独立控制
  * 4. 配置变更自动生效
- * 
+ *
+ * 12-31 18:56 这里就是从配置中心获得配置
  * @author lixiangyu
  */
 @Slf4j

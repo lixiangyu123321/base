@@ -22,7 +22,10 @@ import java.util.stream.Collectors;
  * 4. 数据校验：验证迁移数据的一致性
  * 5. 并发迁移：支持多线程并发迁移
  * 6. 断点续传：支持迁移任务中断后继续
- * 
+ * TODO 迁移过程需要持久化
+ *
+ * *** 12-31 17:57 该数据迁移功能只能实现两个数据库的全量迁移，且相应构造的SQL语句较为简单，并且充斥者大量的全量查询于同步操作，后续希望优化为分批次和多线程
+ *                  并且希望实现增量迁移功能
  * @author lixiangyu
  */
 @Slf4j
@@ -66,7 +69,8 @@ public class DataMigrationService {
             final DataSource finalTargetDataSource = targetDataSource;
             ExecutorService executor = Executors.newFixedThreadPool(config.getThreadCount());
             List<Future<MigrationResult.TableMigrationDetail>> futures = new ArrayList<>();
-            
+
+            // 每个表对应一个线程
             for (String table : tables) {
                 final String tableName = table;
                 Future<MigrationResult.TableMigrationDetail> future = executor.submit(() -> 
@@ -76,6 +80,7 @@ public class DataMigrationService {
             }
             
             // 4. 收集结果
+            // TODO 这里应该使用原子类吧
             long totalRecords = 0;
             long successRecords = 0;
             long failedRecords = 0;
@@ -186,7 +191,8 @@ public class DataMigrationService {
             // 4. 迁移数据
             long totalRecords = getRecordCount(sourceDataSource, tableName);
             detail.setTotalRecords(totalRecords);
-            
+
+            // TODO 迁移过程一定不能是一次性迁移所有记录， 一定要分批次分线程
             if (totalRecords > 0) {
                 long successRecords = copyData(
                         sourceDataSource, targetDataSource, 
@@ -299,7 +305,8 @@ public class DataMigrationService {
         try {
             // 使用 DataValidator 进行详细校验
             DataValidator validator = new DataValidator();
-            
+
+            // TODO 不同表的校验也可以使用多线程的
             for (String tableName : tables) {
                 try {
                     // 1. 记录数校验
@@ -317,6 +324,7 @@ public class DataMigrationService {
                         List<String> primaryKeys = getPrimaryKeys(sourceDataSource, tableName);
                         
                         // 详细校验（如果有主键）
+                        // TODO 其实就是逐条记录比较，有没有更好的方法
                         if (primaryKeys != null && !primaryKeys.isEmpty()) {
                             MigrationResult.TableValidationDetail detail = validator.validateTable(
                                     sourceDataSource, targetDataSource, tableName, primaryKeys);
@@ -465,6 +473,7 @@ public class DataMigrationService {
     
     /**
      * 创建数据源
+     * 基于数据库连接池创建数据源
      */
     private DataSource createDataSource(MigrationConfig.DataSourceConfig config) {
         if (config.getDataSource() != null) {
@@ -686,6 +695,7 @@ public class DataMigrationService {
     
     /**
      * 构建 SELECT SQL
+     * TODO 对单次读取进行限制
      */
     private String buildSelectSql(String tableName, TableStructure structure) {
         String columns = structure.getColumns().stream()
